@@ -63,7 +63,41 @@
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
-                    <Label Text="Email scanning supports Gmail, Outlook, and other email providers using sample detections in this prototype."
+                    <Label Text="Gmail setup required:"
+                           TextColor="#E0E0E0"
+                           FontSize="13"
+                           FontAttributes="Bold" />
+                    <Label Text="1. Create a Google Cloud project."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="2. Enable the Gmail API."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="3. Configure OAuth consent screen."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="4. Add yourself as a test user."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="5. Create an Android OAuth client ID."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="6. Use this app package name: com.companyname.subscriptiontiger"
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="7. Use the debug SHA-1 fingerprint from this machine."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="8. Add the OAuth client ID into SubscriptionTiger configuration."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="PowerShell SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;$env:USERPROFILE\.android\debug.keystore&quot; -storepass android -keypass android"
+                           TextColor="#C9C9C9"
+                           FontSize="12" />
+                    <Label Text="Windows cmd SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;%USERPROFILE%\.android\debug.keystore&quot; -storepass android -keypass android"
+                           TextColor="#C9C9C9"
+                           FontSize="12" />
+                    <Label Text="Real Gmail read-only scanning works only after this setup is complete."
                            TextColor="#E0E0E0"
                            FontSize="13" />
                     <Label Text="Bank file scanning will eventually read downloaded transaction files and detect recurring charges. For now, it uses sample data only."
@@ -87,23 +121,29 @@
                     <Grid x:Name="LastScanResultGrid"
                           IsVisible="False"
                           ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           ColumnSpacing="10"
                           RowSpacing="6">
                         <Label Grid.Row="0" Grid.Column="0" Text="Scan source:" TextColor="#E0E0E0" />
                         <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
 
-                        <Label Grid.Row="1" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Scan mode:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryModeValue" TextColor="#FFFFFF" />
 
-                        <Label Grid.Row="2" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
+                        <Label Grid.Row="2" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
 
-                        <Label Grid.Row="3" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
+                        <Label Grid.Row="3" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
 
-                        <Label Grid.Row="4" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
+                        <Label Grid.Row="4" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="5" Grid.Column="0" Text="Result:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="5" Grid.Column="1" x:Name="ScanSummaryResultValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="6" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="6" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
                     </Grid>
                 </VerticalStackLayout>
             </Frame>

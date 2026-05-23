@@ -3,7 +3,7 @@ namespace SubscriptionTiger.Models;
 public sealed record ConfirmedSubscription(
     Guid Id,
     string Vendor,
-    decimal Price,
+    decimal? Price,
     BillingCycle BillingCycle,
     DateTime RenewalDate,
     SubscriptionStatus Status,

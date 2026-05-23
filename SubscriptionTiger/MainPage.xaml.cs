@@ -1,5 +1,7 @@
 ﻿using SubscriptionTiger.Models;
 using SubscriptionTiger.Services;
+using SubscriptionTiger.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 
 namespace SubscriptionTiger;
@@ -9,17 +11,35 @@ public partial class MainPage : ContentPage
     private readonly InMemorySubscriptionRepository repository = new();
     private readonly SubscriptionDetectionService detectionService = new();
     private readonly DiagnosticsService diagnosticsService = new();
+    private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
 
     public MainPage()
     {
+        gmailScanService = MauiProgram.Services?.GetRequiredService<IGmailScanService>()
+            ?? throw new InvalidOperationException("Gmail scan service is not registered.");
+
         InitializeComponent();
         RefreshUi();
     }
 
-    private void OnScanGmailClicked(object sender, EventArgs e)
+    private async void OnScanGmailClicked(object sender, EventArgs e)
     {
-        AddDetectedCandidates(SubscriptionSource.Gmail, 25, "Messages checked");
+        var gmailResult = await gmailScanService.ScanInboxAsync(CancellationToken.None);
+        var addResult = repository.AddCandidates(gmailResult.Candidates);
+
+        diagnosticsService.RecordScan(SubscriptionSource.Gmail);
+        lastScanResult = new ScanResultSummary(
+            SourceName: "Gmail",
+            ScanMode: gmailResult.ScanMode,
+            ItemsChecked: gmailResult.MessagesChecked,
+            ItemsCheckedLabel: "Messages checked",
+            NewCandidatesFound: addResult.AddedCount,
+            DuplicatesSkipped: addResult.DuplicateCount,
+            ResultMessage: gmailResult.ResultMessage,
+            ScanTime: gmailResult.ScanTime);
+
+        RefreshUi();
     }
 
     private void OnScanOutlookClicked(object sender, EventArgs e)
@@ -73,10 +93,12 @@ public partial class MainPage : ContentPage
         diagnosticsService.RecordScan(source);
         lastScanResult = new ScanResultSummary(
             GetScanSourceDisplayName(source),
+            "Sample scan",
             itemsChecked,
             itemsCheckedLabel,
             addResult.AddedCount,
             addResult.DuplicateCount,
+            "Sample scan completed.",
             DateTime.Now);
 
         RefreshUi();
@@ -108,10 +130,12 @@ public partial class MainPage : ContentPage
         LastScanResultGrid.IsVisible = true;
 
         ScanSummarySourceValue.Text = lastScanResult.SourceName;
+        ScanSummaryModeValue.Text = lastScanResult.ScanMode;
         ScanSummaryItemsCheckedLabel.Text = $"{lastScanResult.ItemsCheckedLabel}:";
         ScanSummaryItemsCheckedValue.Text = lastScanResult.ItemsChecked.ToString(CultureInfo.InvariantCulture);
         ScanSummaryNewCandidatesValue.Text = lastScanResult.NewCandidatesFound.ToString(CultureInfo.InvariantCulture);
         ScanSummaryDuplicatesValue.Text = lastScanResult.DuplicatesSkipped.ToString(CultureInfo.InvariantCulture);
+        ScanSummaryResultValue.Text = lastScanResult.ResultMessage;
         ScanSummaryTimeValue.Text = lastScanResult.ScanTime.ToString("yyyy-MM-dd HH:mm:ss");
     }
 
@@ -163,7 +187,8 @@ public partial class MainPage : ContentPage
         var stack = new VerticalStackLayout { Spacing = 6 };
 
         stack.Children.Add(CreateTitleLabel(candidate.Vendor));
-        stack.Children.Add(CreateDetailLabel($"Price: {candidate.Price:C} | Cycle: {candidate.BillingCycle}"));
+        var candidatePrice = candidate.Price.HasValue ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
+        stack.Children.Add(CreateDetailLabel($"Price: {candidatePrice} | Cycle: {candidate.BillingCycle}"));
         stack.Children.Add(CreateDetailLabel($"Confidence: {candidate.ConfidenceScore}% | Source: {candidate.Source}"));
         stack.Children.Add(CreateDetailLabel($"Reason: {candidate.DetectionReason}"));
 
@@ -204,7 +229,8 @@ public partial class MainPage : ContentPage
         var stack = new VerticalStackLayout { Spacing = 6 };
 
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
-        stack.Children.Add(CreateDetailLabel($"Price: {subscription.Price:C} | Cycle: {subscription.BillingCycle}"));
+        var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
+        stack.Children.Add(CreateDetailLabel($"Price: {confirmedPrice} | Cycle: {subscription.BillingCycle}"));
         stack.Children.Add(CreateDetailLabel($"Renewal: {subscription.RenewalDate:yyyy-MM-dd} | Status: {subscription.Status}"));
         stack.Children.Add(CreateDetailLabel($"Source: {subscription.Source}"));
 
