@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SubscriptionTiger.MainPage"
+             Title="SubscriptionTiger"
+             BackgroundColor="#111111">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,20,20,30" Spacing="16">
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="SubscriptionTiger"
+                       TextColor="#F5C452"
+                       FontSize="32"
+                       FontAttributes="Bold" />
+                <Label Text="Find, review, and track recurring subscriptions."
+                       TextColor="#E0E0E0"
+                       FontSize="14" />
+            </VerticalStackLayout>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Actions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="Scan Gmail"
+                                Clicked="OnScanGmailClicked"
+                                CornerRadius="10"
+                                BackgroundColor="#CFAF57"
+                                TextColor="Black"
+                                FontAttributes="Bold" />
+                        <Button Grid.Column="1"
+                                Text="Scan Outlook"
+                                Clicked="OnScanOutlookClicked"
+                                CornerRadius="10"
+                                BackgroundColor="#CFAF57"
+                                TextColor="Black"
+                                FontAttributes="Bold" />
+                        <Button Grid.Column="2"
+                                Text="Add Sample Manual"
+                                Clicked="OnAddSampleManualClicked"
+                                CornerRadius="10"
+                                BackgroundColor="#2E3440"
+                                TextColor="White" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Suspected Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Confirmed Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="ConfirmedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Diagnostics"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Suspected count:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="SuspectedCountValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Confirmed count:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedCountValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="Last scan source:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="LastScanSourceValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="Last scan time:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="3" Grid.Column="1" x:Name="LastScanTimeValue" TextColor="#FFFFFF" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
