@@ -17,22 +17,22 @@ public partial class MainPage : ContentPage
         RefreshUi();
     }
 
-    private void OnScanGmailClicked(object? sender, EventArgs e)
+    private void OnScanGmailClicked(object sender, EventArgs e)
     {
         AddDetectedCandidates(SubscriptionSource.Gmail, 25, "Messages checked");
     }
 
-    private void OnScanOutlookClicked(object? sender, EventArgs e)
+    private void OnScanOutlookClicked(object sender, EventArgs e)
     {
         AddDetectedCandidates(SubscriptionSource.Outlook, 18, "Messages checked");
     }
 
-    private void OnScanOtherEmailClicked(object? sender, EventArgs e)
+    private void OnScanOtherEmailClicked(object sender, EventArgs e)
     {
         AddDetectedCandidates(SubscriptionSource.OtherEmail, 12, "Messages checked");
     }
 
-    private void OnScanBankFileClicked(object? sender, EventArgs e)
+    private void OnScanBankFileClicked(object sender, EventArgs e)
     {
         AddDetectedCandidates(SubscriptionSource.BankFile, 40, "Transactions checked");
     }

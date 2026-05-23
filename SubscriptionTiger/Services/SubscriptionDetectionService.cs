@@ -32,7 +32,7 @@ public sealed class SubscriptionDetectionService
         return
         [
             new SubscriptionCandidate(Guid.NewGuid(), "Microsoft 365", 99.99m, BillingCycle.Yearly, 93, SubscriptionSource.Outlook, "Recurring invoice and auto-renew references found"),
-            new SubscriptionCandidate(Guid.NewGuid(), "Adobe Creative Cloud", 59.99m, BillingCycle.Monthly, 88, SubscriptionSource.Outlook, "Billing statement cadence indicates monthly subscription")
+            new SubscriptionCandidate(Guid.NewGuid(), "Adobe", 59.99m, BillingCycle.Monthly, 88, SubscriptionSource.Outlook, "Billing statement cadence indicates monthly subscription")
         ];
     }
 
