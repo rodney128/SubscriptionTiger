@@ -15,7 +15,23 @@ public sealed class InMemorySubscriptionRepository
     {
         ArgumentNullException.ThrowIfNull(candidates);
 
-        suspectedCandidates.AddRange(candidates);
+        foreach (var candidate in candidates)
+        {
+            var alreadySuspected = suspectedCandidates.Any(x =>
+                string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
+                && x.Source == candidate.Source);
+
+            var alreadyConfirmed = confirmedSubscriptions.Any(x =>
+                string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
+                && x.Source == candidate.Source);
+
+            if (alreadySuspected || alreadyConfirmed)
+            {
+                continue;
+            }
+
+            suspectedCandidates.Add(candidate);
+        }
     }
 
     public ConfirmedSubscription? SaveCandidate(Guid candidateId)

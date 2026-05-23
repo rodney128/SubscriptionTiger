@@ -26,6 +26,16 @@ public partial class MainPage : ContentPage
         AddDetectedCandidates(SubscriptionSource.Outlook);
     }
 
+    private void OnScanOtherEmailClicked(object? sender, EventArgs e)
+    {
+        AddDetectedCandidates(SubscriptionSource.OtherEmail);
+    }
+
+    private void OnScanBankFileClicked(object? sender, EventArgs e)
+    {
+        AddDetectedCandidates(SubscriptionSource.BankFile);
+    }
+
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
     {
         repository.AddManualSample();

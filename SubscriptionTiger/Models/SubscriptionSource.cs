@@ -4,5 +4,8 @@ public enum SubscriptionSource
 {
     Gmail,
     Outlook,
-    Manual
+    OtherEmail,
+    BankFile,
+    Manual,
+    Imported
 }

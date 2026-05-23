@@ -39,13 +39,36 @@
                                 TextColor="Black"
                                 FontAttributes="Bold"
                                 HorizontalOptions="Fill" />
-                        <Button Text="Add Sample Manual"
-                                Clicked="OnAddSampleManualClicked"
+                        <Button Text="Scan Other Email"
+                                Clicked="OnScanOtherEmailClicked"
+                                CornerRadius="10"
+                                BackgroundColor="#CFAF57"
+                                TextColor="Black"
+                                FontAttributes="Bold"
+                                HorizontalOptions="Fill" />
+                        <Button Text="Scan Bank File"
+                                Clicked="OnScanBankFileClicked"
                                 CornerRadius="10"
                                 BackgroundColor="#2E3440"
                                 TextColor="White"
+                                FontAttributes="Bold"
                                 HorizontalOptions="Fill" />
                     </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Help"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <Label Text="Email scanning supports Gmail, Outlook, and other email providers using sample detections in this prototype."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
+                    <Label Text="Bank file scanning will eventually read downloaded transaction files and detect recurring charges. For now, it uses sample data only."
+                           TextColor="#E0E0E0"
+                           FontSize="13" />
                 </VerticalStackLayout>
             </Frame>
 
