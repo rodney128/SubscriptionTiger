@@ -9,6 +9,7 @@ public partial class MainPage : ContentPage
     private readonly InMemorySubscriptionRepository repository = new();
     private readonly SubscriptionDetectionService detectionService = new();
     private readonly DiagnosticsService diagnosticsService = new();
+    private ScanResultSummary? lastScanResult;
 
     public MainPage()
     {
@@ -18,22 +19,22 @@ public partial class MainPage : ContentPage
 
     private void OnScanGmailClicked(object? sender, EventArgs e)
     {
-        AddDetectedCandidates(SubscriptionSource.Gmail);
+        AddDetectedCandidates(SubscriptionSource.Gmail, 25, "Messages checked");
     }
 
     private void OnScanOutlookClicked(object? sender, EventArgs e)
     {
-        AddDetectedCandidates(SubscriptionSource.Outlook);
+        AddDetectedCandidates(SubscriptionSource.Outlook, 18, "Messages checked");
     }
 
     private void OnScanOtherEmailClicked(object? sender, EventArgs e)
     {
-        AddDetectedCandidates(SubscriptionSource.OtherEmail);
+        AddDetectedCandidates(SubscriptionSource.OtherEmail, 12, "Messages checked");
     }
 
     private void OnScanBankFileClicked(object? sender, EventArgs e)
     {
-        AddDetectedCandidates(SubscriptionSource.BankFile);
+        AddDetectedCandidates(SubscriptionSource.BankFile, 40, "Transactions checked");
     }
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
@@ -65,11 +66,19 @@ public partial class MainPage : ContentPage
         RefreshUi();
     }
 
-    private void AddDetectedCandidates(SubscriptionSource source)
+    private void AddDetectedCandidates(SubscriptionSource source, int itemsChecked, string itemsCheckedLabel)
     {
         var candidates = detectionService.Scan(source);
-        repository.AddCandidates(candidates);
+        var addResult = repository.AddCandidates(candidates);
         diagnosticsService.RecordScan(source);
+        lastScanResult = new ScanResultSummary(
+            GetScanSourceDisplayName(source),
+            itemsChecked,
+            itemsCheckedLabel,
+            addResult.AddedCount,
+            addResult.DuplicateCount,
+            DateTime.Now);
+
         RefreshUi();
     }
 
@@ -82,6 +91,38 @@ public partial class MainPage : ContentPage
         ConfirmedCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
         LastScanSourceValue.Text = diagnosticsService.GetLastScanSourceText();
         LastScanTimeValue.Text = diagnosticsService.GetLastScanTimeText();
+
+        UpdateLastScanSummaryCard();
+    }
+
+    private void UpdateLastScanSummaryCard()
+    {
+        if (lastScanResult is null)
+        {
+            LastScanResultEmptyState.IsVisible = true;
+            LastScanResultGrid.IsVisible = false;
+            return;
+        }
+
+        LastScanResultEmptyState.IsVisible = false;
+        LastScanResultGrid.IsVisible = true;
+
+        ScanSummarySourceValue.Text = lastScanResult.SourceName;
+        ScanSummaryItemsCheckedLabel.Text = $"{lastScanResult.ItemsCheckedLabel}:";
+        ScanSummaryItemsCheckedValue.Text = lastScanResult.ItemsChecked.ToString(CultureInfo.InvariantCulture);
+        ScanSummaryNewCandidatesValue.Text = lastScanResult.NewCandidatesFound.ToString(CultureInfo.InvariantCulture);
+        ScanSummaryDuplicatesValue.Text = lastScanResult.DuplicatesSkipped.ToString(CultureInfo.InvariantCulture);
+        ScanSummaryTimeValue.Text = lastScanResult.ScanTime.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    private static string GetScanSourceDisplayName(SubscriptionSource source)
+    {
+        return source switch
+        {
+            SubscriptionSource.OtherEmail => "Other Email",
+            SubscriptionSource.BankFile => "Bank File",
+            _ => source.ToString()
+        };
     }
 
     private void BuildSuspectedSection()

@@ -73,6 +73,42 @@
             </Frame>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Last Scan Result"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+
+                    <Label x:Name="LastScanResultEmptyState"
+                           Text="No scan has been run yet."
+                           TextColor="#B0B0B0"
+                           FontSize="13" />
+
+                    <Grid x:Name="LastScanResultGrid"
+                          IsVisible="False"
+                          ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="6">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Scan source:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="1" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Suspected Subscriptions"
                            TextColor="#F5C452"

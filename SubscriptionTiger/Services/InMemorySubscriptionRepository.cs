@@ -11,9 +11,12 @@ public sealed class InMemorySubscriptionRepository
 
     public IReadOnlyList<ConfirmedSubscription> ConfirmedSubscriptions => confirmedSubscriptions;
 
-    public void AddCandidates(IEnumerable<SubscriptionCandidate> candidates)
+    public CandidateAddResult AddCandidates(IEnumerable<SubscriptionCandidate> candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
+
+        var addedCount = 0;
+        var duplicateCount = 0;
 
         foreach (var candidate in candidates)
         {
@@ -27,11 +30,15 @@ public sealed class InMemorySubscriptionRepository
 
             if (alreadySuspected || alreadyConfirmed)
             {
+                duplicateCount++;
                 continue;
             }
 
             suspectedCandidates.Add(candidate);
+            addedCount++;
         }
+
+        return new CandidateAddResult(addedCount, duplicateCount);
     }
 
     public ConfirmedSubscription? SaveCandidate(Guid candidateId)
