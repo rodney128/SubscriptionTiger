@@ -24,28 +24,28 @@
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
-                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                        <Button Grid.Column="0"
-                                Text="Scan Gmail"
+                    <VerticalStackLayout Spacing="10">
+                        <Button Text="Scan Gmail"
                                 Clicked="OnScanGmailClicked"
                                 CornerRadius="10"
                                 BackgroundColor="#CFAF57"
                                 TextColor="Black"
-                                FontAttributes="Bold" />
-                        <Button Grid.Column="1"
-                                Text="Scan Outlook"
+                                FontAttributes="Bold"
+                                HorizontalOptions="Fill" />
+                        <Button Text="Scan Outlook"
                                 Clicked="OnScanOutlookClicked"
                                 CornerRadius="10"
                                 BackgroundColor="#CFAF57"
                                 TextColor="Black"
-                                FontAttributes="Bold" />
-                        <Button Grid.Column="2"
-                                Text="Add Sample Manual"
+                                FontAttributes="Bold"
+                                HorizontalOptions="Fill" />
+                        <Button Text="Add Sample Manual"
                                 Clicked="OnAddSampleManualClicked"
                                 CornerRadius="10"
                                 BackgroundColor="#2E3440"
-                                TextColor="White" />
-                    </Grid>
+                                TextColor="White"
+                                HorizontalOptions="Fill" />
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 
