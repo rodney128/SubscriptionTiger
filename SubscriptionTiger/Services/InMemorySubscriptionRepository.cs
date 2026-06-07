@@ -11,6 +11,14 @@ public sealed class InMemorySubscriptionRepository
 
     public IReadOnlyList<ConfirmedSubscription> ConfirmedSubscriptions => confirmedSubscriptions;
 
+    public void SetConfirmedSubscriptions(IEnumerable<ConfirmedSubscription> subscriptions)
+    {
+        ArgumentNullException.ThrowIfNull(subscriptions);
+
+        confirmedSubscriptions.Clear();
+        confirmedSubscriptions.AddRange(subscriptions);
+    }
+
     public CandidateAddResult AddCandidates(IEnumerable<SubscriptionCandidate> candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -63,6 +71,46 @@ public sealed class InMemorySubscriptionRepository
 
         confirmedSubscriptions.Add(confirmed);
         return confirmed;
+    }
+
+    public ConfirmedSubscription AddManualSubscription(
+        string vendor,
+        decimal price,
+        BillingCycle billingCycle,
+        DateTime renewalDate)
+    {
+        if (string.IsNullOrWhiteSpace(vendor))
+        {
+            throw new ArgumentException("Vendor is required.", nameof(vendor));
+        }
+
+        if (price <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(price), "Price must be greater than zero.");
+        }
+
+        var confirmed = new ConfirmedSubscription(
+            Guid.NewGuid(),
+            vendor.Trim(),
+            price,
+            billingCycle,
+            renewalDate,
+            SubscriptionStatus.Active,
+            SubscriptionSource.Manual);
+
+        confirmedSubscriptions.Add(confirmed);
+        return confirmed;
+    }
+
+    public bool DeleteConfirmedSubscription(Guid confirmedSubscriptionId)
+    {
+        var subscription = confirmedSubscriptions.FirstOrDefault(x => x.Id == confirmedSubscriptionId);
+        if (subscription is null)
+        {
+            return false;
+        }
+
+        return confirmedSubscriptions.Remove(subscription);
     }
 
     public bool DismissCandidate(Guid candidateId)

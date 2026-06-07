@@ -27,7 +27,7 @@ namespace SubscriptionTiger
             // 5) Use this machine debug SHA-1.
             builder.Services.AddSingleton(
                 new GmailConfiguration(
-                    ClientId: string.Empty,
+                    ClientId: "159980377381-qcibmutcjoi8ravhl86hj4vbreod4o2m.apps.googleusercontent.com",
                     Scope: "https://www.googleapis.com/auth/gmail.readonly",
                     RedirectUri: "subscriptiontiger://oauth2redirect"));
 
@@ -36,6 +36,8 @@ namespace SubscriptionTiger
                 new GmailScanService(
                     provider.GetRequiredService<IGmailAuthService>(),
                     new HttpClient()));
+            builder.Services.AddSingleton<InMemorySubscriptionRepository>();
+            builder.Services.AddSingleton<LocalSubscriptionStorageService>();
 
 #if DEBUG
     		builder.Logging.AddDebug();

@@ -8,19 +8,36 @@ namespace SubscriptionTiger;
 
 public partial class MainPage : ContentPage
 {
-    private readonly InMemorySubscriptionRepository repository = new();
+    private readonly InMemorySubscriptionRepository repository;
+    private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
     private readonly SubscriptionDetectionService detectionService = new();
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
 
+    private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
+    private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
+    private Picker? ManualBillingCycleInput => this.FindByName<Picker>("ManualBillingCyclePicker");
+    private DatePicker? ManualRenewalDateInput => this.FindByName<DatePicker>("ManualRenewalDatePicker");
+
     public MainPage()
     {
-        gmailScanService = MauiProgram.Services?.GetRequiredService<IGmailScanService>()
-            ?? throw new InvalidOperationException("Gmail scan service is not registered.");
+        var services = MauiProgram.Services ?? throw new InvalidOperationException("Application services are not initialized.");
+        gmailScanService = services.GetRequiredService<IGmailScanService>();
+        repository = services.GetRequiredService<InMemorySubscriptionRepository>();
+        localSubscriptionStorageService = services.GetRequiredService<LocalSubscriptionStorageService>();
 
         InitializeComponent();
+        InitializeManualInputs();
+
+        _ = LoadConfirmedSubscriptionsAsync();
         RefreshUi();
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        await LoadConfirmedSubscriptionsAsync();
     }
 
     private async void OnScanGmailClicked(object sender, EventArgs e)
@@ -60,11 +77,67 @@ public partial class MainPage : ContentPage
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
     {
         repository.AddManualSample();
+        _ = SaveConfirmedSubscriptionsAsync();
         diagnosticsService.RecordScan(SubscriptionSource.Manual);
         RefreshUi();
     }
 
-    private void OnSaveAsSubscriptionClicked(object? sender, EventArgs e)
+    private async void OnAddManualSubscriptionClicked(object sender, EventArgs e)
+    {
+        var vendor = ManualVendorInput?.Text;
+        if (string.IsNullOrWhiteSpace(vendor))
+        {
+            await DisplayAlert("Validation", "Vendor name is required.", "OK");
+            return;
+        }
+
+        var manualPriceText = ManualPriceInput?.Text;
+        if (!decimal.TryParse(manualPriceText, NumberStyles.Number, CultureInfo.CurrentCulture, out var price)
+            && !decimal.TryParse(manualPriceText, NumberStyles.Number, CultureInfo.InvariantCulture, out price))
+        {
+            await DisplayAlert("Validation", "Price must be a valid number.", "OK");
+            return;
+        }
+
+        if (price <= 0)
+        {
+            await DisplayAlert("Validation", "Price must be greater than 0.", "OK");
+            return;
+        }
+
+        var cycle = ManualBillingCycleInput?.SelectedItem?.ToString() == "Yearly"
+            ? BillingCycle.Yearly
+            : BillingCycle.Monthly;
+        var renewalDate = ManualRenewalDateInput?.Date ?? DateTime.Today.AddMonths(cycle == BillingCycle.Monthly ? 1 : 12);
+
+        repository.AddManualSubscription(vendor, price, cycle, renewalDate);
+        diagnosticsService.RecordScan(SubscriptionSource.Manual);
+        await SaveConfirmedSubscriptionsAsync();
+
+        if (ManualVendorInput is not null)
+        {
+            ManualVendorInput.Text = string.Empty;
+        }
+
+        if (ManualPriceInput is not null)
+        {
+            ManualPriceInput.Text = string.Empty;
+        }
+
+        if (ManualBillingCycleInput is not null)
+        {
+            ManualBillingCycleInput.SelectedIndex = 0;
+        }
+
+        if (ManualRenewalDateInput is not null)
+        {
+            ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
+        }
+
+        RefreshUi();
+    }
+
+    private async void OnSaveAsSubscriptionClicked(object? sender, EventArgs e)
     {
         if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
         {
@@ -72,6 +145,7 @@ public partial class MainPage : ContentPage
         }
 
         repository.SaveCandidate(id);
+        await SaveConfirmedSubscriptionsAsync();
         RefreshUi();
     }
 
@@ -83,6 +157,18 @@ public partial class MainPage : ContentPage
         }
 
         repository.DismissCandidate(id);
+        RefreshUi();
+    }
+
+    private async void OnDeleteConfirmedClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
+        {
+            return;
+        }
+
+        repository.DeleteConfirmedSubscription(id);
+        await SaveConfirmedSubscriptionsAsync();
         RefreshUi();
     }
 
@@ -234,8 +320,44 @@ public partial class MainPage : ContentPage
         stack.Children.Add(CreateDetailLabel($"Renewal: {subscription.RenewalDate:yyyy-MM-dd} | Status: {subscription.Status}"));
         stack.Children.Add(CreateDetailLabel($"Source: {subscription.Source}"));
 
+        var deleteButton = new Button
+        {
+            Text = "Delete",
+            BackgroundColor = Color.FromArgb("#2E3440"),
+            TextColor = Colors.White,
+            CornerRadius = 10,
+            CommandParameter = subscription.Id.ToString()
+        };
+        deleteButton.Clicked += OnDeleteConfirmedClicked;
+        stack.Children.Add(deleteButton);
+
         card.Content = stack;
         return card;
+    }
+
+    private async Task LoadConfirmedSubscriptionsAsync()
+    {
+        var stored = await localSubscriptionStorageService.LoadConfirmedSubscriptionsAsync();
+        repository.SetConfirmedSubscriptions(stored);
+        RefreshUi();
+    }
+
+    private async Task SaveConfirmedSubscriptionsAsync()
+    {
+        await localSubscriptionStorageService.SaveConfirmedSubscriptionsAsync(repository.ConfirmedSubscriptions);
+    }
+
+    private void InitializeManualInputs()
+    {
+        if (ManualBillingCycleInput is not null)
+        {
+            ManualBillingCycleInput.SelectedIndex = 0;
+        }
+
+        if (ManualRenewalDateInput is not null)
+        {
+            ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
+        }
     }
 
     private static Frame CreateCardContainer()

@@ -169,6 +169,50 @@
             </Frame>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Add Manual Subscription"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+
+                    <Entry x:Name="ManualVendorEntry"
+                           Placeholder="Vendor name"
+                           TextColor="#FFFFFF"
+                           PlaceholderColor="#9B9B9B"
+                           BackgroundColor="#2A2A2A" />
+
+                    <Entry x:Name="ManualPriceEntry"
+                           Placeholder="Price"
+                           Keyboard="Numeric"
+                           TextColor="#FFFFFF"
+                           PlaceholderColor="#9B9B9B"
+                           BackgroundColor="#2A2A2A" />
+
+                    <Picker x:Name="ManualBillingCyclePicker"
+                            Title="Billing cycle"
+                            TextColor="#FFFFFF"
+                            BackgroundColor="#2A2A2A">
+                        <Picker.Items>
+                            <x:String>Monthly</x:String>
+                            <x:String>Yearly</x:String>
+                        </Picker.Items>
+                    </Picker>
+
+                    <DatePicker x:Name="ManualRenewalDatePicker"
+                                TextColor="#FFFFFF"
+                                BackgroundColor="#2A2A2A" />
+
+                    <Button Text="Add Subscription"
+                            Clicked="OnAddManualSubscriptionClicked"
+                            CornerRadius="10"
+                            BackgroundColor="#CFAF57"
+                            TextColor="Black"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Fill" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Diagnostics"
                            TextColor="#F5C452"
