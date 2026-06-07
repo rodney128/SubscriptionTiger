@@ -20,14 +20,80 @@
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="10">
+                    <Label Text="Add Manual Subscription"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+
+                    <Entry x:Name="ManualVendorEntry"
+                           Placeholder="Vendor name"
+                           TextColor="#FFFFFF"
+                           PlaceholderColor="#9B9B9B"
+                           BackgroundColor="#2A2A2A" />
+
+                    <Entry x:Name="ManualPriceEntry"
+                           Placeholder="Price"
+                           Keyboard="Numeric"
+                           TextColor="#FFFFFF"
+                           PlaceholderColor="#9B9B9B"
+                           BackgroundColor="#2A2A2A" />
+
+                    <Picker x:Name="ManualBillingCyclePicker"
+                            Title="Billing cycle"
+                            TextColor="#FFFFFF"
+                            BackgroundColor="#2A2A2A">
+                        <Picker.Items>
+                            <x:String>Monthly</x:String>
+                            <x:String>Yearly</x:String>
+                        </Picker.Items>
+                    </Picker>
+
+                    <DatePicker x:Name="ManualRenewalDatePicker"
+                                TextColor="#FFFFFF"
+                                BackgroundColor="#2A2A2A" />
+
+                    <Button Text="Add Subscription"
+                            Clicked="OnAddManualSubscriptionClicked"
+                            CornerRadius="10"
+                            BackgroundColor="#CFAF57"
+                            TextColor="Black"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Fill" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Confirmed Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="ConfirmedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Suspected Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="Actions"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
-                    <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Spacing="8">
                         <Button Text="Scan Gmail"
                                 Clicked="OnScanGmailClicked"
                                 CornerRadius="10"
+                                Padding="12,8"
+                                HeightRequest="44"
                                 BackgroundColor="#CFAF57"
                                 TextColor="Black"
                                 FontAttributes="Bold"
@@ -35,6 +101,8 @@
                         <Button Text="Scan Outlook"
                                 Clicked="OnScanOutlookClicked"
                                 CornerRadius="10"
+                                Padding="12,8"
+                                HeightRequest="44"
                                 BackgroundColor="#CFAF57"
                                 TextColor="Black"
                                 FontAttributes="Bold"
@@ -42,6 +110,8 @@
                         <Button Text="Scan Other Email"
                                 Clicked="OnScanOtherEmailClicked"
                                 CornerRadius="10"
+                                Padding="12,8"
+                                HeightRequest="44"
                                 BackgroundColor="#CFAF57"
                                 TextColor="Black"
                                 FontAttributes="Bold"
@@ -49,11 +119,55 @@
                         <Button Text="Scan Bank File"
                                 Clicked="OnScanBankFileClicked"
                                 CornerRadius="10"
+                                Padding="12,8"
+                                HeightRequest="44"
                                 BackgroundColor="#2E3440"
                                 TextColor="White"
                                 FontAttributes="Bold"
                                 HorizontalOptions="Fill" />
                     </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Last Scan Result"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+
+                    <Label x:Name="LastScanResultEmptyState"
+                           Text="No scan has been run yet."
+                           TextColor="#B0B0B0"
+                           FontSize="13" />
+
+                    <Grid x:Name="LastScanResultGrid"
+                          IsVisible="False"
+                          ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="6">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Scan source:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Scan mode:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryModeValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="2" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="5" Grid.Column="0" Text="Result:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="5" Grid.Column="1" x:Name="ScanSummaryResultValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="6" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="6" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
+                    </Grid>
                 </VerticalStackLayout>
             </Frame>
 
@@ -103,112 +217,6 @@
                     <Label Text="Bank file scanning will eventually read downloaded transaction files and detect recurring charges. For now, it uses sample data only."
                            TextColor="#E0E0E0"
                            FontSize="13" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Last Scan Result"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-
-                    <Label x:Name="LastScanResultEmptyState"
-                           Text="No scan has been run yet."
-                           TextColor="#B0B0B0"
-                           FontSize="13" />
-
-                    <Grid x:Name="LastScanResultGrid"
-                          IsVisible="False"
-                          ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                          ColumnSpacing="10"
-                          RowSpacing="6">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Scan source:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="1" Grid.Column="0" Text="Scan mode:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryModeValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="2" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="3" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="4" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="5" Grid.Column="0" Text="Result:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="5" Grid.Column="1" x:Name="ScanSummaryResultValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="6" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="6" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
-                    </Grid>
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Suspected Subscriptions"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Confirmed Subscriptions"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <VerticalStackLayout x:Name="ConfirmedContainer" Spacing="10" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Add Manual Subscription"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-
-                    <Entry x:Name="ManualVendorEntry"
-                           Placeholder="Vendor name"
-                           TextColor="#FFFFFF"
-                           PlaceholderColor="#9B9B9B"
-                           BackgroundColor="#2A2A2A" />
-
-                    <Entry x:Name="ManualPriceEntry"
-                           Placeholder="Price"
-                           Keyboard="Numeric"
-                           TextColor="#FFFFFF"
-                           PlaceholderColor="#9B9B9B"
-                           BackgroundColor="#2A2A2A" />
-
-                    <Picker x:Name="ManualBillingCyclePicker"
-                            Title="Billing cycle"
-                            TextColor="#FFFFFF"
-                            BackgroundColor="#2A2A2A">
-                        <Picker.Items>
-                            <x:String>Monthly</x:String>
-                            <x:String>Yearly</x:String>
-                        </Picker.Items>
-                    </Picker>
-
-                    <DatePicker x:Name="ManualRenewalDatePicker"
-                                TextColor="#FFFFFF"
-                                BackgroundColor="#2A2A2A" />
-
-                    <Button Text="Add Subscription"
-                            Clicked="OnAddManualSubscriptionClicked"
-                            CornerRadius="10"
-                            BackgroundColor="#CFAF57"
-                            TextColor="Black"
-                            FontAttributes="Bold"
-                            HorizontalOptions="Fill" />
                 </VerticalStackLayout>
             </Frame>
 
