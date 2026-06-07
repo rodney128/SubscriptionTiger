@@ -19,6 +19,25 @@
             </VerticalStackLayout>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Confirmed Subscription Summary"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="4">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Confirmed:" TextColor="#E0E0E0" FontSize="13" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ConfirmedSummaryCountValue" TextColor="#FFFFFF" FontSize="13" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="13" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="13" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Add Manual Subscription"
                            TextColor="#F5C452"
@@ -68,38 +87,28 @@
             </Frame>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="Confirmed Subscriptions"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
-                    <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto"
-                          ColumnSpacing="10"
-                          RowSpacing="4">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Confirmed:" TextColor="#E0E0E0" FontSize="13" />
-                        <Label Grid.Row="0" Grid.Column="1" x:Name="ConfirmedSummaryCountValue" TextColor="#FFFFFF" FontSize="13" />
-
-                        <Label Grid.Row="1" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="13" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="13" />
-                    </Grid>
                     <VerticalStackLayout x:Name="ConfirmedContainer" Spacing="10" />
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Suspected Subscriptions"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
-                </VerticalStackLayout>
-            </Frame>
+            <Button x:Name="ToggleScanToolsButton"
+                    Text="Show Scan Tools"
+                    Clicked="OnToggleScanToolsClicked"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    BackgroundColor="#2E3440"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Fill" />
 
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Frame x:Name="ScanToolsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Actions"
+                    <Label Text="Scan Tools"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
@@ -141,11 +150,9 @@
                                 FontAttributes="Bold"
                                 HorizontalOptions="Fill" />
                     </VerticalStackLayout>
-                </VerticalStackLayout>
-            </Frame>
 
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="8">
+                    <Frame CornerRadius="10" Padding="12" BackgroundColor="#171717" BorderColor="#3A2E17" HasShadow="False">
+                        <VerticalStackLayout Spacing="8">
                     <Label Text="Last Scan Result"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
@@ -183,10 +190,42 @@
                         <Label Grid.Row="6" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
                         <Label Grid.Row="6" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
                     </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Button x:Name="ToggleSuspectedButton"
+                    Text="Show Suspected Subscriptions"
+                    Clicked="OnToggleSuspectedSubscriptionsClicked"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    BackgroundColor="#2E3440"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Fill" />
+
+            <Frame x:Name="SuspectedSubscriptionsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Suspected Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button x:Name="ToggleHelpButton"
+                    Text="Show Help"
+                    Clicked="OnToggleHelpClicked"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    BackgroundColor="#2E3440"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Fill" />
+
+            <Frame x:Name="HelpSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Help"
                            TextColor="#F5C452"
@@ -235,7 +274,17 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Button x:Name="ToggleDiagnosticsButton"
+                    Text="Show Diagnostics"
+                    Clicked="OnToggleDiagnosticsClicked"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    BackgroundColor="#2E3440"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Fill" />
+
+            <Frame x:Name="DiagnosticsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Diagnostics"
                            TextColor="#F5C452"

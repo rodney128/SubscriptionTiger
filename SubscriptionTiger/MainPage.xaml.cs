@@ -14,6 +14,10 @@ public partial class MainPage : ContentPage
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
+    private bool isScanToolsVisible;
+    private bool isSuspectedVisible;
+    private bool isHelpVisible;
+    private bool isDiagnosticsVisible;
 
     private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
@@ -29,6 +33,7 @@ public partial class MainPage : ContentPage
 
         InitializeComponent();
         InitializeManualInputs();
+        UpdateCollapsibleSectionState();
 
         _ = LoadConfirmedSubscriptionsAsync();
         RefreshUi();
@@ -57,6 +62,30 @@ public partial class MainPage : ContentPage
             ScanTime: gmailResult.ScanTime);
 
         RefreshUi();
+    }
+
+    private void OnToggleScanToolsClicked(object sender, EventArgs e)
+    {
+        isScanToolsVisible = !isScanToolsVisible;
+        UpdateCollapsibleSectionState();
+    }
+
+    private void OnToggleSuspectedSubscriptionsClicked(object sender, EventArgs e)
+    {
+        isSuspectedVisible = !isSuspectedVisible;
+        UpdateCollapsibleSectionState();
+    }
+
+    private void OnToggleHelpClicked(object sender, EventArgs e)
+    {
+        isHelpVisible = !isHelpVisible;
+        UpdateCollapsibleSectionState();
+    }
+
+    private void OnToggleDiagnosticsClicked(object sender, EventArgs e)
+    {
+        isDiagnosticsVisible = !isDiagnosticsVisible;
+        UpdateCollapsibleSectionState();
     }
 
     private void OnScanOutlookClicked(object sender, EventArgs e)
@@ -379,6 +408,19 @@ public partial class MainPage : ContentPage
         var estimatedMonthlyTotal = repository.ConfirmedSubscriptions
             .Sum(CalculateMonthlyEquivalent);
         ConfirmedSummaryMonthlyTotalValue.Text = estimatedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
+    }
+
+    private void UpdateCollapsibleSectionState()
+    {
+        ScanToolsSection.IsVisible = isScanToolsVisible;
+        SuspectedSubscriptionsSection.IsVisible = isSuspectedVisible;
+        HelpSection.IsVisible = isHelpVisible;
+        DiagnosticsSection.IsVisible = isDiagnosticsVisible;
+
+        ToggleScanToolsButton.Text = isScanToolsVisible ? "Hide Scan Tools" : "Show Scan Tools";
+        ToggleSuspectedButton.Text = isSuspectedVisible ? "Hide Suspected Subscriptions" : "Show Suspected Subscriptions";
+        ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
+        ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics" : "Show Diagnostics";
     }
 
     private void InitializeManualInputs()
