@@ -322,12 +322,12 @@ public partial class MainPage : ContentPage
     private View CreateConfirmedCard(ConfirmedSubscription subscription)
     {
         var card = CreateCardContainer();
-        var stack = new VerticalStackLayout { Spacing = 6 };
+        var stack = new VerticalStackLayout { Spacing = 4 };
 
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
         var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
-        stack.Children.Add(CreateDetailLabel($"Price: {confirmedPrice} | Cycle: {subscription.BillingCycle}"));
-        stack.Children.Add(CreateDetailLabel($"Renewal: {subscription.RenewalDate:yyyy-MM-dd}"));
+        stack.Children.Add(CreateDetailLabel($"{confirmedPrice} {subscription.BillingCycle.ToString().ToLowerInvariant()}"));
+        stack.Children.Add(CreateDetailLabel($"Renews: {subscription.RenewalDate:yyyy-MM-dd}"));
         var monthlyEquivalent = CalculateMonthlyEquivalent(subscription);
         stack.Children.Add(CreateDetailLabel($"Monthly equivalent: {monthlyEquivalent.ToString("C", CultureInfo.CurrentCulture)}"));
 
@@ -337,6 +337,8 @@ public partial class MainPage : ContentPage
             BackgroundColor = Color.FromArgb("#2E3440"),
             TextColor = Colors.White,
             CornerRadius = 10,
+            HeightRequest = 40,
+            Padding = new Thickness(12, 6),
             CommandParameter = subscription.Id.ToString()
         };
         deleteButton.Clicked += OnDeleteConfirmedClicked;
@@ -397,7 +399,7 @@ public partial class MainPage : ContentPage
         return new Frame
         {
             CornerRadius = 12,
-            Padding = new Thickness(14),
+            Padding = new Thickness(12),
             BorderColor = Color.FromArgb("#3A2E17"),
             BackgroundColor = Color.FromArgb("#1D1D1D"),
             HasShadow = false

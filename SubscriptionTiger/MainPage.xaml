@@ -6,7 +6,7 @@
              BackgroundColor="#111111">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20,20,20,30" Spacing="16">
+        <VerticalStackLayout Padding="20,20,20,84" Spacing="16">
 
             <VerticalStackLayout Spacing="4">
                 <Label Text="SubscriptionTiger"
