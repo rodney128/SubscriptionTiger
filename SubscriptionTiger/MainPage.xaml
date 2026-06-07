@@ -8,15 +8,23 @@
     <ScrollView>
         <VerticalStackLayout Padding="20,20,20,84" Spacing="16">
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="SubscriptionTiger"
-                       TextColor="#F5C452"
-                       FontSize="28"
-                       FontAttributes="Bold" />
-                <Label Text="Find, review, and track recurring subscriptions."
-                       TextColor="#E0E0E0"
-                       FontSize="14" />
-            </VerticalStackLayout>
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                <Image Source="tigericon.png"
+                       HeightRequest="52"
+                       WidthRequest="52"
+                       Aspect="AspectFit"
+                       HorizontalOptions="Start"
+                       VerticalOptions="Center" />
+                <VerticalStackLayout Spacing="4" VerticalOptions="Center">
+                    <Label Text="SubscriptionTiger"
+                           TextColor="#F5C452"
+                           FontSize="28"
+                           FontAttributes="Bold" />
+                    <Label Text="Find, review, and track recurring subscriptions."
+                           TextColor="#E0E0E0"
+                           FontSize="14" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="10">
