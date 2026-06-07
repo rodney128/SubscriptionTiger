@@ -110,7 +110,16 @@ public partial class MainPage : ContentPage
             : BillingCycle.Monthly;
         var renewalDate = ManualRenewalDateInput?.Date ?? DateTime.Today.AddMonths(cycle == BillingCycle.Monthly ? 1 : 12);
 
-        repository.AddManualSubscription(vendor, price, cycle, renewalDate);
+        try
+        {
+            repository.AddManualSubscription(vendor, price, cycle, renewalDate);
+        }
+        catch (InvalidOperationException)
+        {
+            await DisplayAlert("Validation", "A subscription with this vendor and billing cycle already exists.", "OK");
+            return;
+        }
+
         diagnosticsService.RecordScan(SubscriptionSource.Manual);
         await SaveConfirmedSubscriptionsAsync();
 
@@ -194,6 +203,7 @@ public partial class MainPage : ContentPage
     {
         BuildSuspectedSection();
         BuildConfirmedSection();
+        UpdateConfirmedSummary();
 
         SuspectedCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
         ConfirmedCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
@@ -257,11 +267,11 @@ public partial class MainPage : ContentPage
 
         if (repository.ConfirmedSubscriptions.Count == 0)
         {
-            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Save a suspected item or add a manual sample."));
+            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Save a suspected item or add a manual subscription."));
             return;
         }
 
-        foreach (var subscription in repository.ConfirmedSubscriptions)
+        foreach (var subscription in repository.ConfirmedSubscriptions.OrderBy(x => x.Vendor, StringComparer.CurrentCultureIgnoreCase))
         {
             ConfirmedContainer.Children.Add(CreateConfirmedCard(subscription));
         }
@@ -317,8 +327,9 @@ public partial class MainPage : ContentPage
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
         var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
         stack.Children.Add(CreateDetailLabel($"Price: {confirmedPrice} | Cycle: {subscription.BillingCycle}"));
-        stack.Children.Add(CreateDetailLabel($"Renewal: {subscription.RenewalDate:yyyy-MM-dd} | Status: {subscription.Status}"));
-        stack.Children.Add(CreateDetailLabel($"Source: {subscription.Source}"));
+        stack.Children.Add(CreateDetailLabel($"Renewal: {subscription.RenewalDate:yyyy-MM-dd}"));
+        var monthlyEquivalent = CalculateMonthlyEquivalent(subscription);
+        stack.Children.Add(CreateDetailLabel($"Monthly equivalent: {monthlyEquivalent.ToString("C", CultureInfo.CurrentCulture)}"));
 
         var deleteButton = new Button
         {
@@ -335,6 +346,18 @@ public partial class MainPage : ContentPage
         return card;
     }
 
+    private static decimal CalculateMonthlyEquivalent(ConfirmedSubscription subscription)
+    {
+        if (!subscription.Price.HasValue)
+        {
+            return 0m;
+        }
+
+        return subscription.BillingCycle == BillingCycle.Yearly
+            ? decimal.Round(subscription.Price.Value / 12m, 2, MidpointRounding.AwayFromZero)
+            : subscription.Price.Value;
+    }
+
     private async Task LoadConfirmedSubscriptionsAsync()
     {
         var stored = await localSubscriptionStorageService.LoadConfirmedSubscriptionsAsync();
@@ -345,6 +368,15 @@ public partial class MainPage : ContentPage
     private async Task SaveConfirmedSubscriptionsAsync()
     {
         await localSubscriptionStorageService.SaveConfirmedSubscriptionsAsync(repository.ConfirmedSubscriptions);
+    }
+
+    private void UpdateConfirmedSummary()
+    {
+        ConfirmedSummaryCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
+
+        var estimatedMonthlyTotal = repository.ConfirmedSubscriptions
+            .Sum(CalculateMonthlyEquivalent);
+        ConfirmedSummaryMonthlyTotalValue.Text = estimatedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
     }
 
     private void InitializeManualInputs()

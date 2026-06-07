@@ -11,7 +11,7 @@
             <VerticalStackLayout Spacing="4">
                 <Label Text="SubscriptionTiger"
                        TextColor="#F5C452"
-                       FontSize="32"
+                       FontSize="28"
                        FontAttributes="Bold" />
                 <Label Text="Find, review, and track recurring subscriptions."
                        TextColor="#E0E0E0"
@@ -19,7 +19,7 @@
             </VerticalStackLayout>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="Add Manual Subscription"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
@@ -27,6 +27,7 @@
 
                     <Entry x:Name="ManualVendorEntry"
                            Placeholder="Vendor name"
+                           HeightRequest="44"
                            TextColor="#FFFFFF"
                            PlaceholderColor="#9B9B9B"
                            BackgroundColor="#2A2A2A" />
@@ -34,12 +35,14 @@
                     <Entry x:Name="ManualPriceEntry"
                            Placeholder="Price"
                            Keyboard="Numeric"
+                           HeightRequest="44"
                            TextColor="#FFFFFF"
                            PlaceholderColor="#9B9B9B"
                            BackgroundColor="#2A2A2A" />
 
                     <Picker x:Name="ManualBillingCyclePicker"
                             Title="Billing cycle"
+                            HeightRequest="44"
                             TextColor="#FFFFFF"
                             BackgroundColor="#2A2A2A">
                         <Picker.Items>
@@ -49,12 +52,14 @@
                     </Picker>
 
                     <DatePicker x:Name="ManualRenewalDatePicker"
+                                HeightRequest="44"
                                 TextColor="#FFFFFF"
                                 BackgroundColor="#2A2A2A" />
 
                     <Button Text="Add Subscription"
                             Clicked="OnAddManualSubscriptionClicked"
                             CornerRadius="10"
+                            HeightRequest="44"
                             BackgroundColor="#CFAF57"
                             TextColor="Black"
                             FontAttributes="Bold"
@@ -68,6 +73,16 @@
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="4">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Confirmed:" TextColor="#E0E0E0" FontSize="13" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ConfirmedSummaryCountValue" TextColor="#FFFFFF" FontSize="13" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="13" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="13" />
+                    </Grid>
                     <VerticalStackLayout x:Name="ConfirmedContainer" Spacing="10" />
                 </VerticalStackLayout>
             </Frame>

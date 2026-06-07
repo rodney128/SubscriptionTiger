@@ -89,9 +89,18 @@ public sealed class InMemorySubscriptionRepository
             throw new ArgumentOutOfRangeException(nameof(price), "Price must be greater than zero.");
         }
 
+        var normalizedVendor = vendor.Trim();
+        var duplicateExists = confirmedSubscriptions.Any(x =>
+            x.BillingCycle == billingCycle
+            && string.Equals(x.Vendor, normalizedVendor, StringComparison.OrdinalIgnoreCase));
+        if (duplicateExists)
+        {
+            throw new InvalidOperationException("A subscription with the same vendor and billing cycle already exists.");
+        }
+
         var confirmed = new ConfirmedSubscription(
             Guid.NewGuid(),
-            vendor.Trim(),
+            normalizedVendor,
             price,
             billingCycle,
             renewalDate,
