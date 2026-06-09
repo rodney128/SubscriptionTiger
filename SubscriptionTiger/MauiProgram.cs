@@ -23,7 +23,7 @@ namespace SubscriptionTiger
             // 1) Create Google Cloud project and enable Gmail API.
             // 2) Configure OAuth consent screen and add test user.
             // 3) Create Android OAuth client ID.
-            // 4) Use package name from csproj: com.companyname.subscriptiontiger
+            // 4) Use package name from csproj: com.farenoughnorth.subscriptiontiger
             // 5) Use this machine debug SHA-1.
             builder.Services.AddSingleton(
                 new GmailConfiguration(

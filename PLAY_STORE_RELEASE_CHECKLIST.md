@@ -4,7 +4,7 @@
 SubscriptionTiger
 
 ## Package Name
-com.companyname.subscriptiontiger
+com.farenoughnorth.subscriptiontiger
 
 ## Release Version
 0.1.0

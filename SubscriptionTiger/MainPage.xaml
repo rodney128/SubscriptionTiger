@@ -233,7 +233,7 @@
                             <Label Text="5. Create an Android OAuth client ID."
                                    TextColor="#E0E0E0"
                                    FontSize="13" />
-                            <Label Text="6. Use this app package name: com.companyname.subscriptiontiger"
+                    <Label Text="6. Use this app package name: com.farenoughnorth.subscriptiontiger"
                                    TextColor="#E0E0E0"
                                    FontSize="13" />
                             <Label Text="7. Use the debug SHA-1 fingerprint from this machine."

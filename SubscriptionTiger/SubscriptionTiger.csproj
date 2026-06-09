@@ -31,7 +31,7 @@
 		<ApplicationTitle>SubscriptionTiger</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.subscriptiontiger</ApplicationId>
+        <ApplicationId>com.farenoughnorth.subscriptiontiger</ApplicationId>
 
 		<!-- Versions -->
       <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
