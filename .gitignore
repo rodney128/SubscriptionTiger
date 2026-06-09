@@ -10,3 +10,5 @@ _private_signing/
 *.jks
 *.p12
 *.pfx
+*.aab
+*.apk
