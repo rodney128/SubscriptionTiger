@@ -5,3 +5,8 @@ bin/
 obj/
 *.user
 *.suo
+_private_signing/
+*.keystore
+*.jks
+*.p12
+*.pfx
