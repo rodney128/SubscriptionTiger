@@ -53,3 +53,10 @@ Before public release, confirm:
 - Target audience selection
 - Closed testing track, if required by the developer account
 - Real Android device/emulator visual test
+
+## Debug-Mode Upload Resolution
+- Play Console upload initially reported a debug-mode issue.
+- Release outputs were cleaned and regenerated from a fresh Release build and publish.
+- Final AAB path: `C:\Users\conta\source\repos\SubscriptionTiger\SubscriptionTiger\bin\Release\net10.0-android\publish\com.farenoughnorth.subscriptiontiger-Signed.aab`
+- Generated Release manifest debuggable status: `android:debuggable=\"true\"` not found in checked release manifests.
+- Signing verification result: `jarsigner -verify` passes and reports signer `CN=SubscriptionTiger, OU=Mobile, O=SubscriptionTiger, L=NA, ST=NA, C=US`.

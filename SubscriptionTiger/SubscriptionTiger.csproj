@@ -54,6 +54,9 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' and '$(SubTigerSigningKeyStore)' != '' and '$(SubTigerSigningKeyAlias)' != '' and '$(SubTigerSigningKeyPass)' != '' and '$(SubTigerSigningStorePass)' != ''">
+     <AndroidDebuggable>false</AndroidDebuggable>
+		<DebugSymbols>false</DebugSymbols>
+		<DebugType>none</DebugType>
 		<AndroidKeyStore>true</AndroidKeyStore>
 		<AndroidSigningKeyStore>$(SubTigerSigningKeyStore)</AndroidSigningKeyStore>
 		<AndroidSigningKeyAlias>$(SubTigerSigningKeyAlias)</AndroidSigningKeyAlias>
