@@ -67,3 +67,8 @@ Before public release, confirm:
 - The broken custom URI redirect flow is disabled for internal testing until a proper native Android Google authorization implementation is completed.
 - Gmail scan is currently foundation/pending in internal test builds.
 - Subscription review workflow remains testable through sample/manual/local data.
+
+## Play Upload Signing Key Requirement
+- Play Console currently expects upload key SHA-1 `EE:37:79:B4:52:62:F3:EF:C9:C3:7B:26:E8:F7:99:22:38:6F:1C:1C` for this app slot.
+- Do not regenerate signing keystores for this existing Play app entry.
+- Final upload AAB must verify with the expected `EE:37...` signer before upload.
