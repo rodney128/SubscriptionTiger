@@ -60,3 +60,10 @@ Before public release, confirm:
 - Final AAB path: `C:\Users\conta\source\repos\SubscriptionTiger\SubscriptionTiger\bin\Release\net10.0-android\publish\com.farenoughnorth.subscriptiontiger-Signed.aab`
 - Generated Release manifest debuggable status: `android:debuggable=\"true\"` not found in checked release manifests.
 - Signing verification result: `jarsigner -verify` passes and reports signer `CN=SubscriptionTiger, OU=Mobile, O=SubscriptionTiger, L=NA, ST=NA, C=US`.
+
+## Gmail OAuth Status
+- Internal testing found Google OAuth `Error 400: invalid_request`.
+- Error details showed `redirect_uri=subscriptiontiger://oauth2redirect`.
+- The broken custom URI redirect flow is disabled for internal testing until a proper native Android Google authorization implementation is completed.
+- Gmail scan is currently foundation/pending in internal test builds.
+- Subscription review workflow remains testable through sample/manual/local data.

@@ -11,6 +11,8 @@ Verify that SubscriptionTiger installs, launches, displays the cleaned-up main s
 - Confirm tiger icon appears
 - Confirm Scan for Subscriptions button is visible
 - Confirm Scan Sources section is visible
+- Tap Scan Gmail and confirm it does not open a browser OAuth flow
+- Confirm Gmail status message explains OAuth is pending for this internal test build
 - Tap More Options
 - Confirm Help can show/hide
 - Confirm Diagnostics can show/hide
@@ -28,3 +30,8 @@ Verify that SubscriptionTiger installs, launches, displays the cleaned-up main s
 - Did anything look cut off or broken?
 - Did any action crash?
 - What phone model and Android version were used?
+
+## Gmail OAuth Internal-Testing Note
+- Gmail sign-in is intentionally disabled/pending in this internal-test build while native Google authorization setup is completed.
+- Test app launch, main screen, More Options, sample/manual subscription flow, suspected/confirmed subscription handling, and diagnostics.
+- Do not report Gmail OAuth disabled as a crash if the app shows the expected message.
