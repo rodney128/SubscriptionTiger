@@ -217,6 +217,14 @@
                             FontAttributes="Bold" />
 
                     <VerticalStackLayout x:Name="MoreOptionsContent" IsVisible="False" Spacing="8">
+                        <Button x:Name="ClearTestDataButton"
+                                Text="Clear Test Data"
+                                Clicked="OnClearTestDataClicked"
+                                CornerRadius="10"
+                                HeightRequest="42"
+                                BackgroundColor="#2E3440"
+                                TextColor="White" />
+
                         <Button x:Name="ToggleHelpButton"
                                 Text="Show Help"
                                 Clicked="OnToggleHelpClicked"

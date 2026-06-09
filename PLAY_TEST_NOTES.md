@@ -18,6 +18,8 @@ Verify that SubscriptionTiger installs, launches, displays the cleaned-up main s
 - Tap Gmail row and confirm it does not open a browser OAuth flow
 - Confirm Gmail pending message appears in-app
 - Tap Outlook, Other email, and Bank file rows and confirm each shows a short coming-soon message
+- Tap Add Sample Subscription repeatedly and confirm duplicate Gym Membership cards are not created
+- Open More Options and run Clear Test Data, then confirm suspected and confirmed sections reset cleanly
 - Confirm Last Activity card stays compact and readable
 - Tap More Options
 - Confirm More Options content is collapsed by default until expanded

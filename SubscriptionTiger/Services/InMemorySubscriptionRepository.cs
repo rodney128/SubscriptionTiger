@@ -4,6 +4,10 @@ namespace SubscriptionTiger.Services;
 
 public sealed class InMemorySubscriptionRepository
 {
+    private const string SampleVendor = "Gym Membership";
+    private const decimal SamplePrice = 45.99m;
+    private const BillingCycle SampleBillingCycle = BillingCycle.Monthly;
+
     private readonly List<SubscriptionCandidate> suspectedCandidates = new();
     private readonly List<ConfirmedSubscription> confirmedSubscriptions = new();
 
@@ -133,17 +137,53 @@ public sealed class InMemorySubscriptionRepository
         return suspectedCandidates.Remove(candidate);
     }
 
-    public void AddManualSample()
+    public bool AddManualSampleIfMissing()
     {
+        if (SampleAlreadyExists())
+        {
+            return false;
+        }
+
         var manual = new ConfirmedSubscription(
             Guid.NewGuid(),
-            "Gym Membership",
-            45.99m,
-            BillingCycle.Monthly,
+            SampleVendor,
+            SamplePrice,
+            SampleBillingCycle,
             DateTime.Today.AddMonths(1),
             SubscriptionStatus.Active,
             SubscriptionSource.Manual);
 
         confirmedSubscriptions.Add(manual);
+        return true;
+    }
+
+    public bool ClearAllTestData()
+    {
+        var hadData = suspectedCandidates.Count > 0 || confirmedSubscriptions.Count > 0;
+
+        suspectedCandidates.Clear();
+        confirmedSubscriptions.Clear();
+
+        return hadData;
+    }
+
+    private bool SampleAlreadyExists()
+    {
+        var sampleExistsInConfirmed = confirmedSubscriptions.Any(x =>
+            string.Equals(x.Vendor, SampleVendor, StringComparison.OrdinalIgnoreCase)
+            && x.BillingCycle == SampleBillingCycle
+            && x.Price == SamplePrice);
+
+        if (sampleExistsInConfirmed)
+        {
+            return true;
+        }
+
+        var sampleExistsInSuspected = suspectedCandidates.Any(x =>
+            string.Equals(x.Vendor, SampleVendor, StringComparison.OrdinalIgnoreCase)
+            && x.BillingCycle == SampleBillingCycle
+            && x.Price == SamplePrice);
+
+        return sampleExistsInSuspected;
     }
 }

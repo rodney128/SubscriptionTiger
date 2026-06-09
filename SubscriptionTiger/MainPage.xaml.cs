@@ -134,11 +134,42 @@ public partial class MainPage : ContentPage
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
     {
-        repository.AddManualSample();
+        var added = repository.AddManualSampleIfMissing();
+
+        if (!added)
+        {
+            lastAction = "Sample subscription already exists.";
+            lastScanStatus = "Sample subscription already exists.";
+            RefreshUi();
+            _ = DisplayAlert("Sample Exists", "Sample subscription already exists.", "OK");
+            return;
+        }
+
         _ = SaveConfirmedSubscriptionsAsync();
         diagnosticsService.RecordScan(SubscriptionSource.Manual);
         lastAction = "Added sample subscription";
         lastScanStatus = "Sample subscription added.";
+        RefreshUi();
+    }
+
+    private async void OnClearTestDataClicked(object sender, EventArgs e)
+    {
+        var shouldClear = await DisplayAlert(
+            "Clear Test Data",
+            "Clear all local suspected and confirmed subscriptions?",
+            "Clear",
+            "Cancel");
+
+        if (!shouldClear)
+        {
+            return;
+        }
+
+        repository.ClearAllTestData();
+        await SaveConfirmedSubscriptionsAsync();
+
+        lastAction = "Test data cleared.";
+        lastScanStatus = "Test data cleared.";
         RefreshUi();
     }
 
@@ -294,7 +325,7 @@ public partial class MainPage : ContentPage
 
         if (repository.ConfirmedSubscriptions.Count == 0)
         {
-            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet."));
+            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Confirm a suspected subscription or add one manually."));
             return;
         }
 
