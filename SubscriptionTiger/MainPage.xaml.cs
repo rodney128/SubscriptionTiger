@@ -8,14 +8,19 @@ namespace SubscriptionTiger;
 
 public partial class MainPage : ContentPage
 {
+    private const string GmailOAuthDiagnosticsMessage = "Disabled pending native Google authorization implementation.";
+
     private readonly InMemorySubscriptionRepository repository;
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
     private readonly SubscriptionDetectionService detectionService = new();
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
+    private string lastAction = "App opened";
+    private string lastScanStatus = "No scan activity yet.";
     private bool isHelpVisible;
     private bool isDiagnosticsVisible;
+    private bool isMoreOptionsVisible;
 
     private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
@@ -59,7 +64,15 @@ public partial class MainPage : ContentPage
             ResultMessage: gmailResult.ResultMessage,
             ScanTime: gmailResult.ScanTime);
 
+        lastAction = "Tapped Gmail connection pending";
+        lastScanStatus = "Gmail connection pending for this test build.";
+
         RefreshUi();
+
+        await DisplayAlert(
+            "Gmail Pending",
+            "Gmail connection is not enabled in this test build yet. You can still test SubscriptionTiger using sample or manual subscriptions.",
+            "OK");
     }
 
     private void OnToggleHelpClicked(object sender, EventArgs e)
@@ -74,18 +87,27 @@ public partial class MainPage : ContentPage
         UpdateCollapsibleSectionState();
     }
 
+    private void OnToggleMoreOptionsClicked(object sender, EventArgs e)
+    {
+        isMoreOptionsVisible = !isMoreOptionsVisible;
+        UpdateCollapsibleSectionState();
+    }
+
     private void OnScanOutlookClicked(object sender, EventArgs e)
     {
+        lastAction = "Tapped Outlook coming soon";
         AddDetectedCandidates(SubscriptionSource.Outlook, 18, "Messages checked");
     }
 
     private void OnScanOtherEmailClicked(object sender, EventArgs e)
     {
+        lastAction = "Tapped Other email coming soon";
         AddDetectedCandidates(SubscriptionSource.OtherEmail, 12, "Messages checked");
     }
 
     private void OnScanBankFileClicked(object sender, EventArgs e)
     {
+        lastAction = "Tapped Bank file coming soon";
         AddDetectedCandidates(SubscriptionSource.BankFile, 40, "Transactions checked");
     }
 
@@ -94,6 +116,8 @@ public partial class MainPage : ContentPage
         repository.AddManualSample();
         _ = SaveConfirmedSubscriptionsAsync();
         diagnosticsService.RecordScan(SubscriptionSource.Manual);
+        lastAction = "Added sample subscription";
+        lastScanStatus = "Sample subscription added.";
         RefreshUi();
     }
 
@@ -137,6 +161,8 @@ public partial class MainPage : ContentPage
 
         diagnosticsService.RecordScan(SubscriptionSource.Manual);
         await SaveConfirmedSubscriptionsAsync();
+        lastAction = "Added manual subscription";
+        lastScanStatus = "Manual subscription added.";
 
         if (ManualVendorInput is not null)
         {
@@ -170,6 +196,8 @@ public partial class MainPage : ContentPage
 
         repository.SaveCandidate(id);
         await SaveConfirmedSubscriptionsAsync();
+        lastAction = "Confirmed suspected subscription";
+        lastScanStatus = "Suspected subscription moved to confirmed.";
         RefreshUi();
     }
 
@@ -181,6 +209,8 @@ public partial class MainPage : ContentPage
         }
 
         repository.DismissCandidate(id);
+        lastAction = "Dismissed suspected subscription";
+        lastScanStatus = "Suspected subscription dismissed.";
         RefreshUi();
     }
 
@@ -193,6 +223,8 @@ public partial class MainPage : ContentPage
 
         repository.DeleteConfirmedSubscription(id);
         await SaveConfirmedSubscriptionsAsync();
+        lastAction = "Removed confirmed subscription";
+        lastScanStatus = "Confirmed subscription removed.";
         RefreshUi();
     }
 
@@ -201,6 +233,7 @@ public partial class MainPage : ContentPage
         var candidates = detectionService.Scan(source);
         var addResult = repository.AddCandidates(candidates);
         diagnosticsService.RecordScan(source);
+        lastScanStatus = "Sample source scan completed.";
         lastScanResult = new ScanResultSummary(
             GetScanSourceDisplayName(source),
             "Sample scan",
@@ -222,8 +255,10 @@ public partial class MainPage : ContentPage
 
         SuspectedCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
         ConfirmedCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
-        LastScanSourceValue.Text = diagnosticsService.GetLastScanSourceText();
-        LastScanTimeValue.Text = diagnosticsService.GetLastScanTimeText();
+        LastActionValue.Text = lastAction;
+        LastScanStatusValue.Text = lastScanStatus;
+        GmailOAuthStatusValue.Text = GmailOAuthDiagnosticsMessage;
+        StorageStatusValue.Text = "Local storage ready";
 
         UpdateLastScanSummaryCard();
     }
@@ -240,14 +275,19 @@ public partial class MainPage : ContentPage
         LastScanResultEmptyState.IsVisible = false;
         LastScanResultGrid.IsVisible = true;
 
-        ScanSummarySourceValue.Text = lastScanResult.SourceName;
-        ScanSummaryModeValue.Text = lastScanResult.ScanMode;
-        ScanSummaryItemsCheckedLabel.Text = $"{lastScanResult.ItemsCheckedLabel}:";
-        ScanSummaryItemsCheckedValue.Text = lastScanResult.ItemsChecked.ToString(CultureInfo.InvariantCulture);
-        ScanSummaryNewCandidatesValue.Text = lastScanResult.NewCandidatesFound.ToString(CultureInfo.InvariantCulture);
-        ScanSummaryDuplicatesValue.Text = lastScanResult.DuplicatesSkipped.ToString(CultureInfo.InvariantCulture);
-        ScanSummaryResultValue.Text = lastScanResult.ResultMessage;
-        ScanSummaryTimeValue.Text = lastScanResult.ScanTime.ToString("yyyy-MM-dd HH:mm:ss");
+        ScanSummarySourceValue.Text = $"Source: {lastScanResult.SourceName}";
+        ScanSummaryResultValue.Text = BuildCompactResultMessage(lastScanResult);
+        ScanSummaryTimeValue.Text = $"Updated: {lastScanResult.ScanTime:yyyy-MM-dd HH:mm}";
+    }
+
+    private static string BuildCompactResultMessage(ScanResultSummary summary)
+    {
+        if (summary.SourceName == "Gmail")
+        {
+            return "Gmail connection pending for this test build.";
+        }
+
+        return $"{summary.NewCandidatesFound} new, {summary.DuplicatesSkipped} skipped.";
     }
 
     private static string GetScanSourceDisplayName(SubscriptionSource source)
@@ -266,7 +306,7 @@ public partial class MainPage : ContentPage
 
         if (repository.SuspectedCandidates.Count == 0)
         {
-            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Run a scan to populate results."));
+            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Add a sample subscription or connect a source to begin."));
             return;
         }
 
@@ -282,7 +322,7 @@ public partial class MainPage : ContentPage
 
         if (repository.ConfirmedSubscriptions.Count == 0)
         {
-            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Save a suspected item or add a manual subscription."));
+            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet."));
             return;
         }
 
@@ -295,22 +335,22 @@ public partial class MainPage : ContentPage
     private View CreateSuspectedCard(SubscriptionCandidate candidate)
     {
         var card = CreateCardContainer();
-        var stack = new VerticalStackLayout { Spacing = 6 };
+        var stack = new VerticalStackLayout { Spacing = 4 };
 
         stack.Children.Add(CreateTitleLabel(candidate.Vendor));
         var candidatePrice = candidate.Price.HasValue ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
         stack.Children.Add(CreateDetailLabel($"Price: {candidatePrice} | Cycle: {candidate.BillingCycle}"));
         stack.Children.Add(CreateDetailLabel($"Confidence: {candidate.ConfidenceScore}% | Source: {candidate.Source}"));
-        stack.Children.Add(CreateDetailLabel($"Reason: {candidate.DetectionReason}"));
 
-        var actions = new HorizontalStackLayout { Spacing = 10 };
+        var actions = new HorizontalStackLayout { Spacing = 8 };
 
         var saveButton = new Button
         {
-            Text = "Save as Subscription",
+            Text = "Confirm",
             BackgroundColor = Color.FromArgb("#CFAF57"),
             TextColor = Colors.Black,
             CornerRadius = 10,
+            HeightRequest = 36,
             FontAttributes = FontAttributes.Bold,
             CommandParameter = candidate.Id.ToString()
         };
@@ -322,6 +362,7 @@ public partial class MainPage : ContentPage
             BackgroundColor = Color.FromArgb("#2E3440"),
             TextColor = Colors.White,
             CornerRadius = 10,
+            HeightRequest = 36,
             CommandParameter = candidate.Id.ToString()
         };
         dismissButton.Clicked += OnDismissClicked;
@@ -337,7 +378,7 @@ public partial class MainPage : ContentPage
     private View CreateConfirmedCard(ConfirmedSubscription subscription)
     {
         var card = CreateCardContainer();
-        var stack = new VerticalStackLayout { Spacing = 4 };
+        var stack = new VerticalStackLayout { Spacing = 3 };
 
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
         var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
@@ -348,12 +389,12 @@ public partial class MainPage : ContentPage
 
         var deleteButton = new Button
         {
-            Text = "Delete",
+            Text = "Remove",
             BackgroundColor = Color.FromArgb("#2E3440"),
             TextColor = Colors.White,
             CornerRadius = 10,
-            HeightRequest = 40,
-            Padding = new Thickness(12, 6),
+            HeightRequest = 36,
+            Padding = new Thickness(10, 5),
             CommandParameter = subscription.Id.ToString()
         };
         deleteButton.Clicked += OnDeleteConfirmedClicked;
@@ -398,9 +439,11 @@ public partial class MainPage : ContentPage
 
     private void UpdateCollapsibleSectionState()
     {
+        MoreOptionsContent.IsVisible = isMoreOptionsVisible;
         HelpSection.IsVisible = isHelpVisible;
         DiagnosticsSection.IsVisible = isDiagnosticsVisible;
 
+        ToggleMoreOptionsButton.Text = isMoreOptionsVisible ? "Hide More Options" : "Show More Options";
         ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
         ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics / Developer Info" : "Show Diagnostics / Developer Info";
     }
@@ -423,7 +466,7 @@ public partial class MainPage : ContentPage
         return new Frame
         {
             CornerRadius = 12,
-            Padding = new Thickness(12),
+            Padding = new Thickness(10),
             BorderColor = Color.FromArgb("#3A2E17"),
             BackgroundColor = Color.FromArgb("#1D1D1D"),
             HasShadow = false
@@ -436,7 +479,7 @@ public partial class MainPage : ContentPage
         {
             Text = text,
             TextColor = Color.FromArgb("#F5C452"),
-            FontSize = 18,
+            FontSize = 16,
             FontAttributes = FontAttributes.Bold
         };
     }
@@ -447,7 +490,7 @@ public partial class MainPage : ContentPage
         {
             Text = text,
             TextColor = Color.FromArgb("#E0E0E0"),
-            FontSize = 13
+            FontSize = 12
         };
     }
 
