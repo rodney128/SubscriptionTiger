@@ -11,9 +11,13 @@ Verify that SubscriptionTiger installs, launches, displays the cleaned-up main s
 - Confirm tiger icon appears
 - Confirm Subscription Review section is visible near the top
 - Confirm Add Sample Subscription and Add Manual Subscription actions are easy to find
-- Confirm Scan Sources section labels Gmail as pending and other sources as coming soon
-- Tap Scan Gmail and confirm it does not open a browser OAuth flow
-- Confirm Gmail status message explains OAuth is pending for this internal test build
+- Confirm manual entry fields are hidden by default
+- Tap Add Manual Subscription and confirm manual form expands
+- Tap Cancel Manual Entry and confirm manual form collapses
+- Confirm Scan Sources section shows status rows for Gmail/Outlook/Other email/Bank file
+- Tap Gmail row and confirm it does not open a browser OAuth flow
+- Confirm Gmail pending message appears in-app
+- Tap Outlook, Other email, and Bank file rows and confirm each shows a short coming-soon message
 - Confirm Last Activity card stays compact and readable
 - Tap More Options
 - Confirm More Options content is collapsed by default until expanded
@@ -42,3 +46,5 @@ Verify that SubscriptionTiger installs, launches, displays the cleaned-up main s
 ## UI Debug Focus
 - Main flow should be understandable in a few seconds: add sample/manual data, review suspected subscriptions, confirm/dismiss, and manage confirmed subscriptions.
 - Diagnostics and developer details should stay secondary under More Options.
+- Manual entry should stay collapsed until explicitly opened.
+- Scan source statuses should look informational first, not like fully active scan buttons.

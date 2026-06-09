@@ -9,10 +9,10 @@ namespace SubscriptionTiger;
 public partial class MainPage : ContentPage
 {
     private const string GmailOAuthDiagnosticsMessage = "Disabled pending native Google authorization implementation.";
+    private const string SourcePendingMessage = "This source is not enabled in this test build yet.";
 
     private readonly InMemorySubscriptionRepository repository;
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
-    private readonly SubscriptionDetectionService detectionService = new();
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
@@ -21,6 +21,7 @@ public partial class MainPage : ContentPage
     private bool isHelpVisible;
     private bool isDiagnosticsVisible;
     private bool isMoreOptionsVisible;
+    private bool isManualEntryVisible;
 
     private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
@@ -75,6 +76,24 @@ public partial class MainPage : ContentPage
             "OK");
     }
 
+    private void OnToggleManualEntryClicked(object sender, EventArgs e)
+    {
+        isManualEntryVisible = !isManualEntryVisible;
+        lastAction = isManualEntryVisible ? "Expanded manual entry" : "Collapsed manual entry";
+        UpdateCollapsibleSectionState();
+        RefreshUi();
+    }
+
+    private void OnCancelManualEntryClicked(object sender, EventArgs e)
+    {
+        ClearManualEntryInputs();
+        isManualEntryVisible = false;
+        lastAction = "Canceled manual entry";
+        lastScanStatus = "Manual entry canceled.";
+        UpdateCollapsibleSectionState();
+        RefreshUi();
+    }
+
     private void OnToggleHelpClicked(object sender, EventArgs e)
     {
         isHelpVisible = !isHelpVisible;
@@ -93,22 +112,24 @@ public partial class MainPage : ContentPage
         UpdateCollapsibleSectionState();
     }
 
-    private void OnScanOutlookClicked(object sender, EventArgs e)
+    private async void OnOutlookSourceTapped(object? sender, TappedEventArgs e)
     {
-        lastAction = "Tapped Outlook coming soon";
-        AddDetectedCandidates(SubscriptionSource.Outlook, 18, "Messages checked");
+        await ShowPendingSourceMessageAsync("Outlook");
     }
 
-    private void OnScanOtherEmailClicked(object sender, EventArgs e)
+    private async void OnOtherEmailSourceTapped(object? sender, TappedEventArgs e)
     {
-        lastAction = "Tapped Other email coming soon";
-        AddDetectedCandidates(SubscriptionSource.OtherEmail, 12, "Messages checked");
+        await ShowPendingSourceMessageAsync("Other email");
     }
 
-    private void OnScanBankFileClicked(object sender, EventArgs e)
+    private async void OnBankFileSourceTapped(object? sender, TappedEventArgs e)
     {
-        lastAction = "Tapped Bank file coming soon";
-        AddDetectedCandidates(SubscriptionSource.BankFile, 40, "Transactions checked");
+        await ShowPendingSourceMessageAsync("Bank file");
+    }
+
+    private void OnGmailSourceTapped(object? sender, TappedEventArgs e)
+    {
+        OnScanGmailClicked(this, EventArgs.Empty);
     }
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
@@ -164,25 +185,9 @@ public partial class MainPage : ContentPage
         lastAction = "Added manual subscription";
         lastScanStatus = "Manual subscription added.";
 
-        if (ManualVendorInput is not null)
-        {
-            ManualVendorInput.Text = string.Empty;
-        }
-
-        if (ManualPriceInput is not null)
-        {
-            ManualPriceInput.Text = string.Empty;
-        }
-
-        if (ManualBillingCycleInput is not null)
-        {
-            ManualBillingCycleInput.SelectedIndex = 0;
-        }
-
-        if (ManualRenewalDateInput is not null)
-        {
-            ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
-        }
+        ClearManualEntryInputs();
+        isManualEntryVisible = false;
+        UpdateCollapsibleSectionState();
 
         RefreshUi();
     }
@@ -228,31 +233,13 @@ public partial class MainPage : ContentPage
         RefreshUi();
     }
 
-    private void AddDetectedCandidates(SubscriptionSource source, int itemsChecked, string itemsCheckedLabel)
-    {
-        var candidates = detectionService.Scan(source);
-        var addResult = repository.AddCandidates(candidates);
-        diagnosticsService.RecordScan(source);
-        lastScanStatus = "Sample source scan completed.";
-        lastScanResult = new ScanResultSummary(
-            GetScanSourceDisplayName(source),
-            "Sample scan",
-            itemsChecked,
-            itemsCheckedLabel,
-            addResult.AddedCount,
-            addResult.DuplicateCount,
-            "Sample scan completed.",
-            DateTime.Now);
-
-        RefreshUi();
-    }
-
     private void RefreshUi()
     {
         BuildSuspectedSection();
         BuildConfirmedSection();
         UpdateConfirmedSummary();
 
+        SuspectedSummaryCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
         SuspectedCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
         ConfirmedCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
         LastActionValue.Text = lastAction;
@@ -267,37 +254,22 @@ public partial class MainPage : ContentPage
     {
         if (lastScanResult is null)
         {
-            LastScanResultEmptyState.IsVisible = true;
-            LastScanResultGrid.IsVisible = false;
+            LastActivityValue.Text = "Last activity: No scan yet.";
             return;
         }
 
-        LastScanResultEmptyState.IsVisible = false;
-        LastScanResultGrid.IsVisible = true;
-
-        ScanSummarySourceValue.Text = $"Source: {lastScanResult.SourceName}";
-        ScanSummaryResultValue.Text = BuildCompactResultMessage(lastScanResult);
-        ScanSummaryTimeValue.Text = $"Updated: {lastScanResult.ScanTime:yyyy-MM-dd HH:mm}";
+        var summaryText = BuildCompactResultMessage(lastScanResult);
+        LastActivityValue.Text = $"Last activity: {summaryText}";
     }
 
     private static string BuildCompactResultMessage(ScanResultSummary summary)
     {
         if (summary.SourceName == "Gmail")
         {
-            return "Gmail connection pending for this test build.";
+            return "Gmail connection pending.";
         }
 
-        return $"{summary.NewCandidatesFound} new, {summary.DuplicatesSkipped} skipped.";
-    }
-
-    private static string GetScanSourceDisplayName(SubscriptionSource source)
-    {
-        return source switch
-        {
-            SubscriptionSource.OtherEmail => "Other Email",
-            SubscriptionSource.BankFile => "Bank File",
-            _ => source.ToString()
-        };
+        return $"{summary.SourceName} scan added {summary.NewCandidatesFound} items.";
     }
 
     private void BuildSuspectedSection()
@@ -442,14 +414,50 @@ public partial class MainPage : ContentPage
         MoreOptionsContent.IsVisible = isMoreOptionsVisible;
         HelpSection.IsVisible = isHelpVisible;
         DiagnosticsSection.IsVisible = isDiagnosticsVisible;
+        ManualEntryPanel.IsVisible = isManualEntryVisible;
 
         ToggleMoreOptionsButton.Text = isMoreOptionsVisible ? "Hide More Options" : "Show More Options";
         ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
         ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics / Developer Info" : "Show Diagnostics / Developer Info";
+        ToggleManualEntryButton.Text = isManualEntryVisible ? "Cancel Manual Entry" : "Add Manual Subscription";
     }
 
     private void InitializeManualInputs()
     {
+        isManualEntryVisible = false;
+
+        if (ManualBillingCycleInput is not null)
+        {
+            ManualBillingCycleInput.SelectedIndex = 0;
+        }
+
+        if (ManualRenewalDateInput is not null)
+        {
+            ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
+        }
+    }
+
+    private async Task ShowPendingSourceMessageAsync(string sourceName)
+    {
+        lastAction = $"Tapped {sourceName} coming soon";
+        lastScanStatus = SourcePendingMessage;
+        RefreshUi();
+
+        await DisplayAlert(sourceName, SourcePendingMessage, "OK");
+    }
+
+    private void ClearManualEntryInputs()
+    {
+        if (ManualVendorInput is not null)
+        {
+            ManualVendorInput.Text = string.Empty;
+        }
+
+        if (ManualPriceInput is not null)
+        {
+            ManualPriceInput.Text = string.Empty;
+        }
+
         if (ManualBillingCycleInput is not null)
         {
             ManualBillingCycleInput.SelectedIndex = 0;
