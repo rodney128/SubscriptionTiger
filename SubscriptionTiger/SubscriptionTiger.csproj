@@ -45,6 +45,20 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+		<!-- Optional release signing inputs sourced from environment variables (never commit secrets). -->
+		<SubTigerSigningKeyStore>$([System.Environment]::GetEnvironmentVariable('SUBTIGER_ANDROID_KEYSTORE'))</SubTigerSigningKeyStore>
+		<SubTigerSigningKeyAlias>$([System.Environment]::GetEnvironmentVariable('SUBTIGER_ANDROID_KEY_ALIAS'))</SubTigerSigningKeyAlias>
+		<SubTigerSigningKeyPass>$([System.Environment]::GetEnvironmentVariable('SUBTIGER_ANDROID_KEY_PASS'))</SubTigerSigningKeyPass>
+		<SubTigerSigningStorePass>$([System.Environment]::GetEnvironmentVariable('SUBTIGER_ANDROID_STORE_PASS'))</SubTigerSigningStorePass>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' and '$(SubTigerSigningKeyStore)' != '' and '$(SubTigerSigningKeyAlias)' != '' and '$(SubTigerSigningKeyPass)' != '' and '$(SubTigerSigningStorePass)' != ''">
+		<AndroidKeyStore>true</AndroidKeyStore>
+		<AndroidSigningKeyStore>$(SubTigerSigningKeyStore)</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias>$(SubTigerSigningKeyAlias)</AndroidSigningKeyAlias>
+		<AndroidSigningKeyPass>$(SubTigerSigningKeyPass)</AndroidSigningKeyPass>
+		<AndroidSigningStorePass>$(SubTigerSigningStorePass)</AndroidSigningStorePass>
 	</PropertyGroup>
 
 	<ItemGroup>
