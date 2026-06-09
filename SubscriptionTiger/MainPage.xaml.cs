@@ -10,7 +10,7 @@ namespace SubscriptionTiger;
 public partial class MainPage : ContentPage
 {
     private const string GmailOAuthDiagnosticsMessage = "Disabled pending native Google authorization implementation.";
-    private const string SourcePendingMessage = "This source is not enabled in this test build yet.";
+    private const string SourcePendingMessage = "Automatic scanning is coming soon. This source is not enabled in this test build yet.";
 
     private readonly InMemorySubscriptionRepository repository;
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
@@ -75,7 +75,7 @@ public partial class MainPage : ContentPage
 
         await DisplayAlert(
             "Gmail Pending",
-            "Gmail connection is not enabled in this test build yet. You can still test SubscriptionTiger using sample or manual subscriptions.",
+            "Gmail connection is not enabled in this test build yet. Use a demo or manual subscription to test the review workflow.",
             "OK");
     }
 
@@ -163,16 +163,16 @@ public partial class MainPage : ContentPage
 
             if (!added)
             {
-                lastAction = "Sample subscription already exists.";
-                lastScanStatus = "Sample subscription already exists.";
+                lastAction = "Demo subscription already exists.";
+                lastScanStatus = "Demo subscription already exists.";
                 RefreshUi();
-                await DisplayAlert("Sample Exists", "Sample subscription already exists.", "OK");
+                await DisplayAlert("Demo Exists", "Demo subscription already exists.", "OK");
                 return;
             }
 
             diagnosticsService.RecordScan(SubscriptionSource.Manual);
-            lastAction = "Added sample subscription";
-            lastScanStatus = "Sample subscription added.";
+            lastAction = "Added demo subscription";
+            lastScanStatus = "Demo subscription added.";
             RefreshUi();
         }
         finally
@@ -202,8 +202,8 @@ public partial class MainPage : ContentPage
         repository.ClearAllTestData();
         await SaveConfirmedSubscriptionsAsync();
 
-        lastAction = "Test data cleared.";
-        lastScanStatus = "Test data cleared.";
+        lastAction = "Demo/test data cleared.";
+        lastScanStatus = "Demo/test data cleared.";
         RefreshUi();
     }
 
@@ -343,7 +343,7 @@ public partial class MainPage : ContentPage
 
         if (repository.SuspectedCandidates.Count == 0)
         {
-            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Add a sample subscription or connect a source to begin."));
+            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Add a demo subscription or connect a source when scanning is available."));
             return;
         }
 
@@ -359,7 +359,7 @@ public partial class MainPage : ContentPage
 
         if (repository.ConfirmedSubscriptions.Count == 0)
         {
-            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Confirm a suspected subscription or add one manually."));
+            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Confirmed subscriptions will appear here after you add or approve one."));
             return;
         }
 
@@ -484,7 +484,7 @@ public partial class MainPage : ContentPage
         ToggleMoreOptionsButton.Text = isMoreOptionsVisible ? "Hide More Options" : "Show More Options";
         ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
         ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics / Developer Info" : "Show Diagnostics / Developer Info";
-        ToggleManualEntryButton.Text = isManualEntryVisible ? "Cancel Manual Entry" : "Add Manual Subscription";
+        ToggleManualEntryButton.Text = isManualEntryVisible ? "Cancel Manual Entry" : "Add Subscription Manually";
     }
 
     private void InitializeManualInputs()

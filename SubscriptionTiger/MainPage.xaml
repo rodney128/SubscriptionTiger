@@ -27,13 +27,17 @@
 
             <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Subscription Review"
+                    <Label Text="Get Started"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="17" />
 
+                    <Label Text="Automatic scanning is still being connected. For now, test the review workflow with a demo subscription or enter one manually."
+                           TextColor="#E0E0E0"
+                           FontSize="12" />
+
                     <Button x:Name="AddSampleSubscriptionButton"
-                            Text="Add Sample Subscription"
+                            Text="Add Demo Subscription"
                             Clicked="OnAddSampleManualClicked"
                             CornerRadius="10"
                             HeightRequest="42"
@@ -42,7 +46,7 @@
                             FontAttributes="Bold" />
 
                     <Button x:Name="ToggleManualEntryButton"
-                            Text="Add Manual Subscription"
+                            Text="Add Subscription Manually"
                             Clicked="OnToggleManualEntryClicked"
                             CornerRadius="10"
                             HeightRequest="42"
@@ -114,6 +118,10 @@
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="17" />
+
+                    <Label Text="Automatic scanning is coming soon."
+                           TextColor="#E0E0E0"
+                           FontSize="12" />
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
                         <Grid.GestureRecognizers>
@@ -243,10 +251,10 @@
                                 <Label Text="SubscriptionTiger helps you review recurring subscriptions."
                                        TextColor="#E0E0E0"
                                        FontSize="12" />
-                                <Label Text="Use Add Sample Subscription to create test data quickly."
+                                <Label Text="Use Add Demo Subscription to create test data quickly."
                                        TextColor="#E0E0E0"
                                        FontSize="12" />
-                                <Label Text="Use Add Manual Subscription to enter a subscription yourself."
+                                <Label Text="Use Add Subscription Manually to enter a subscription yourself."
                                        TextColor="#E0E0E0"
                                        FontSize="12" />
                                 <Label Text="Gmail connection is pending while Google authorization is being rebuilt."
