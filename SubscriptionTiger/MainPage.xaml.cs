@@ -14,8 +14,6 @@ public partial class MainPage : ContentPage
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
     private ScanResultSummary? lastScanResult;
-    private bool isScanToolsVisible;
-    private bool isSuspectedVisible;
     private bool isHelpVisible;
     private bool isDiagnosticsVisible;
 
@@ -62,18 +60,6 @@ public partial class MainPage : ContentPage
             ScanTime: gmailResult.ScanTime);
 
         RefreshUi();
-    }
-
-    private void OnToggleScanToolsClicked(object sender, EventArgs e)
-    {
-        isScanToolsVisible = !isScanToolsVisible;
-        UpdateCollapsibleSectionState();
-    }
-
-    private void OnToggleSuspectedSubscriptionsClicked(object sender, EventArgs e)
-    {
-        isSuspectedVisible = !isSuspectedVisible;
-        UpdateCollapsibleSectionState();
     }
 
     private void OnToggleHelpClicked(object sender, EventArgs e)
@@ -412,15 +398,11 @@ public partial class MainPage : ContentPage
 
     private void UpdateCollapsibleSectionState()
     {
-        ScanToolsSection.IsVisible = isScanToolsVisible;
-        SuspectedSubscriptionsSection.IsVisible = isSuspectedVisible;
         HelpSection.IsVisible = isHelpVisible;
         DiagnosticsSection.IsVisible = isDiagnosticsVisible;
 
-        ToggleScanToolsButton.Text = isScanToolsVisible ? "Hide Scan Tools" : "Show Scan Tools";
-        ToggleSuspectedButton.Text = isSuspectedVisible ? "Hide Suspected Subscriptions" : "Show Suspected Subscriptions";
         ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
-        ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics" : "Show Diagnostics";
+        ToggleDiagnosticsButton.Text = isDiagnosticsVisible ? "Hide Diagnostics / Developer Info" : "Show Diagnostics / Developer Info";
     }
 
     private void InitializeManualInputs()

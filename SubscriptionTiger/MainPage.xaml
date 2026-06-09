@@ -6,25 +6,104 @@
              BackgroundColor="#111111">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20,20,20,84" Spacing="16">
+        <VerticalStackLayout Padding="20,20,20,84" Spacing="14">
 
-            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+            <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                <Label Text="SubscriptionTiger"
+                       TextColor="#F5C452"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center" />
                 <Image Source="tigericon.png"
-                       HeightRequest="52"
-                       WidthRequest="52"
-                       Aspect="AspectFit"
-                       HorizontalOptions="Start"
-                       VerticalOptions="Center" />
-                <VerticalStackLayout Spacing="4" VerticalOptions="Center">
-                    <Label Text="SubscriptionTiger"
+                       WidthRequest="84"
+                       HeightRequest="84"
+                       HorizontalOptions="Center"
+                       Aspect="AspectFit" />
+                <Label Text="Find, review, and track recurring subscriptions."
+                       TextColor="#E0E0E0"
+                       FontSize="14"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+
+            <Button Text="Scan for Subscriptions"
+                    Clicked="OnScanGmailClicked"
+                    CornerRadius="12"
+                    HeightRequest="48"
+                    BackgroundColor="#CFAF57"
+                    TextColor="Black"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Fill" />
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Scan Sources"
                            TextColor="#F5C452"
-                           FontSize="28"
-                           FontAttributes="Bold" />
-                    <Label Text="Find, review, and track recurring subscriptions."
-                           TextColor="#E0E0E0"
-                           FontSize="14" />
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <Button Text="Scan Gmail" Clicked="OnScanGmailClicked" CornerRadius="10" HeightRequest="42" BackgroundColor="#CFAF57" TextColor="Black" FontAttributes="Bold" />
+                    <Button Text="Scan Outlook" Clicked="OnScanOutlookClicked" CornerRadius="10" HeightRequest="42" BackgroundColor="#CFAF57" TextColor="Black" FontAttributes="Bold" />
+                    <Button Text="Scan Other Email" Clicked="OnScanOtherEmailClicked" CornerRadius="10" HeightRequest="42" BackgroundColor="#CFAF57" TextColor="Black" FontAttributes="Bold" />
+                    <Button Text="Scan Bank File" Clicked="OnScanBankFileClicked" CornerRadius="10" HeightRequest="42" BackgroundColor="#2E3440" TextColor="White" FontAttributes="Bold" />
                 </VerticalStackLayout>
-            </HorizontalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Last Scan Result"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+
+                    <Label x:Name="LastScanResultEmptyState"
+                           Text="No scan has been run yet."
+                           TextColor="#B0B0B0"
+                           FontSize="13" />
+
+                    <Grid x:Name="LastScanResultGrid"
+                          IsVisible="False"
+                          ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="6">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Source:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Result:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryResultValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="Time:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
+                    </Grid>
+
+                    <Grid IsVisible="False"
+                          ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          ColumnSpacing="10"
+                          RowSpacing="6">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Scan mode:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummaryModeValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="1" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
+                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Suspected Subscriptions"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="18" />
+                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
+                </VerticalStackLayout>
+            </Frame>
 
             <Frame CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="10">
@@ -104,213 +183,110 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <Button x:Name="ToggleScanToolsButton"
-                    Text="Show Scan Tools"
-                    Clicked="OnToggleScanToolsClicked"
-                    CornerRadius="10"
-                    HeightRequest="44"
-                    BackgroundColor="#2E3440"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    HorizontalOptions="Fill" />
-
-            <Frame x:Name="ScanToolsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Frame x:Name="MoreOptionsSection" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Scan Tools"
+                    <Label Text="More Options"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="18" />
-                    <VerticalStackLayout Spacing="8">
-                        <Button Text="Scan Gmail"
-                                Clicked="OnScanGmailClicked"
-                                CornerRadius="10"
-                                Padding="12,8"
-                                HeightRequest="44"
-                                BackgroundColor="#CFAF57"
-                                TextColor="Black"
-                                FontAttributes="Bold"
-                                HorizontalOptions="Fill" />
-                        <Button Text="Scan Outlook"
-                                Clicked="OnScanOutlookClicked"
-                                CornerRadius="10"
-                                Padding="12,8"
-                                HeightRequest="44"
-                                BackgroundColor="#CFAF57"
-                                TextColor="Black"
-                                FontAttributes="Bold"
-                                HorizontalOptions="Fill" />
-                        <Button Text="Scan Other Email"
-                                Clicked="OnScanOtherEmailClicked"
-                                CornerRadius="10"
-                                Padding="12,8"
-                                HeightRequest="44"
-                                BackgroundColor="#CFAF57"
-                                TextColor="Black"
-                                FontAttributes="Bold"
-                                HorizontalOptions="Fill" />
-                        <Button Text="Scan Bank File"
-                                Clicked="OnScanBankFileClicked"
-                                CornerRadius="10"
-                                Padding="12,8"
-                                HeightRequest="44"
-                                BackgroundColor="#2E3440"
-                                TextColor="White"
-                                FontAttributes="Bold"
-                                HorizontalOptions="Fill" />
-                    </VerticalStackLayout>
 
-                    <Frame CornerRadius="10" Padding="12" BackgroundColor="#171717" BorderColor="#3A2E17" HasShadow="False">
+                    <Button x:Name="AddSampleManualButton"
+                            Text="Add Sample Manual Subscription"
+                            Clicked="OnAddSampleManualClicked"
+                            CornerRadius="10"
+                            HeightRequest="44"
+                            BackgroundColor="#2E3440"
+                            TextColor="White"
+                            FontAttributes="Bold" />
+
+                    <Button x:Name="ToggleHelpButton"
+                            Text="Show Help"
+                            Clicked="OnToggleHelpClicked"
+                            CornerRadius="10"
+                            HeightRequest="44"
+                            BackgroundColor="#2E3440"
+                            TextColor="White"
+                            FontAttributes="Bold" />
+
+                    <Frame x:Name="HelpSection" IsVisible="False" CornerRadius="10" Padding="12" BackgroundColor="#171717" BorderColor="#3A2E17" HasShadow="False">
                         <VerticalStackLayout Spacing="8">
-                    <Label Text="Last Scan Result"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-
-                    <Label x:Name="LastScanResultEmptyState"
-                           Text="No scan has been run yet."
-                           TextColor="#B0B0B0"
-                           FontSize="13" />
-
-                    <Grid x:Name="LastScanResultGrid"
-                          IsVisible="False"
-                          ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                          ColumnSpacing="10"
-                          RowSpacing="6">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Scan source:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="0" Grid.Column="1" x:Name="ScanSummarySourceValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="1" Grid.Column="0" Text="Scan mode:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ScanSummaryModeValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="2" Grid.Column="0" x:Name="ScanSummaryItemsCheckedLabel" Text="Items checked:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="2" Grid.Column="1" x:Name="ScanSummaryItemsCheckedValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="3" Grid.Column="0" Text="New candidates found:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="3" Grid.Column="1" x:Name="ScanSummaryNewCandidatesValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="4" Grid.Column="0" Text="Duplicates skipped:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="4" Grid.Column="1" x:Name="ScanSummaryDuplicatesValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="5" Grid.Column="0" Text="Result:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="5" Grid.Column="1" x:Name="ScanSummaryResultValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="6" Grid.Column="0" Text="Scan time:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="6" Grid.Column="1" x:Name="ScanSummaryTimeValue" TextColor="#FFFFFF" />
-                    </Grid>
+                            <Label Text="Help"
+                                   TextColor="#F5C452"
+                                   FontAttributes="Bold"
+                                   FontSize="18" />
+                            <Label Text="Gmail setup required:"
+                                   TextColor="#E0E0E0"
+                                   FontSize="13"
+                                   FontAttributes="Bold" />
+                            <Label Text="1. Create a Google Cloud project."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="2. Enable the Gmail API."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="3. Configure OAuth consent screen."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="4. Add yourself as a test user."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="5. Create an Android OAuth client ID."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="6. Use this app package name: com.companyname.subscriptiontiger"
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="7. Use the debug SHA-1 fingerprint from this machine."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="8. Add the OAuth client ID into SubscriptionTiger configuration."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="PowerShell SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;$env:USERPROFILE\.android\debug.keystore&quot; -storepass android -keypass android"
+                                   TextColor="#C9C9C9"
+                                   FontSize="12" />
+                            <Label Text="Windows cmd SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;%USERPROFILE%\.android\debug.keystore&quot; -storepass android -keypass android"
+                                   TextColor="#C9C9C9"
+                                   FontSize="12" />
+                            <Label Text="Real Gmail read-only scanning works only after this setup is complete."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
+                            <Label Text="Bank file scanning will eventually read downloaded transaction files and detect recurring charges. For now, it uses sample data only."
+                                   TextColor="#E0E0E0"
+                                   FontSize="13" />
                         </VerticalStackLayout>
                     </Frame>
-                </VerticalStackLayout>
-            </Frame>
 
-            <Button x:Name="ToggleSuspectedButton"
-                    Text="Show Suspected Subscriptions"
-                    Clicked="OnToggleSuspectedSubscriptionsClicked"
-                    CornerRadius="10"
-                    HeightRequest="44"
-                    BackgroundColor="#2E3440"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    HorizontalOptions="Fill" />
+                    <Button x:Name="ToggleDiagnosticsButton"
+                            Text="Show Diagnostics / Developer Info"
+                            Clicked="OnToggleDiagnosticsClicked"
+                            CornerRadius="10"
+                            HeightRequest="44"
+                            BackgroundColor="#2E3440"
+                            TextColor="White"
+                            FontAttributes="Bold" />
 
-            <Frame x:Name="SuspectedSubscriptionsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Suspected Subscriptions"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <VerticalStackLayout x:Name="SuspectedContainer" Spacing="10" />
-                </VerticalStackLayout>
-            </Frame>
+                    <Frame x:Name="DiagnosticsSection" IsVisible="False" CornerRadius="10" Padding="12" BackgroundColor="#171717" BorderColor="#3A2E17" HasShadow="False">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Diagnostics"
+                                   TextColor="#F5C452"
+                                   FontAttributes="Bold"
+                                   FontSize="18" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                                <Label Grid.Row="0" Grid.Column="0" Text="Suspected count:" TextColor="#E0E0E0" />
+                                <Label Grid.Row="0" Grid.Column="1" x:Name="SuspectedCountValue" TextColor="#FFFFFF" />
 
-            <Button x:Name="ToggleHelpButton"
-                    Text="Show Help"
-                    Clicked="OnToggleHelpClicked"
-                    CornerRadius="10"
-                    HeightRequest="44"
-                    BackgroundColor="#2E3440"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    HorizontalOptions="Fill" />
+                                <Label Grid.Row="1" Grid.Column="0" Text="Confirmed count:" TextColor="#E0E0E0" />
+                                <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedCountValue" TextColor="#FFFFFF" />
 
-            <Frame x:Name="HelpSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Help"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <Label Text="Gmail setup required:"
-                           TextColor="#E0E0E0"
-                           FontSize="13"
-                           FontAttributes="Bold" />
-                    <Label Text="1. Create a Google Cloud project."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="2. Enable the Gmail API."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="3. Configure OAuth consent screen."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="4. Add yourself as a test user."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="5. Create an Android OAuth client ID."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="6. Use this app package name: com.companyname.subscriptiontiger"
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="7. Use the debug SHA-1 fingerprint from this machine."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="8. Add the OAuth client ID into SubscriptionTiger configuration."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="PowerShell SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;$env:USERPROFILE\.android\debug.keystore&quot; -storepass android -keypass android"
-                           TextColor="#C9C9C9"
-                           FontSize="12" />
-                    <Label Text="Windows cmd SHA-1 command: keytool -list -v -alias androiddebugkey -keystore &quot;%USERPROFILE%\.android\debug.keystore&quot; -storepass android -keypass android"
-                           TextColor="#C9C9C9"
-                           FontSize="12" />
-                    <Label Text="Real Gmail read-only scanning works only after this setup is complete."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                    <Label Text="Bank file scanning will eventually read downloaded transaction files and detect recurring charges. For now, it uses sample data only."
-                           TextColor="#E0E0E0"
-                           FontSize="13" />
-                </VerticalStackLayout>
-            </Frame>
+                                <Label Grid.Row="2" Grid.Column="0" Text="Last scan source:" TextColor="#E0E0E0" />
+                                <Label Grid.Row="2" Grid.Column="1" x:Name="LastScanSourceValue" TextColor="#FFFFFF" />
 
-            <Button x:Name="ToggleDiagnosticsButton"
-                    Text="Show Diagnostics"
-                    Clicked="OnToggleDiagnosticsClicked"
-                    CornerRadius="10"
-                    HeightRequest="44"
-                    BackgroundColor="#2E3440"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    HorizontalOptions="Fill" />
-
-            <Frame x:Name="DiagnosticsSection" IsVisible="False" CornerRadius="12" Padding="14" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="6">
-                    <Label Text="Diagnostics"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="18" />
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Suspected count:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="0" Grid.Column="1" x:Name="SuspectedCountValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="1" Grid.Column="0" Text="Confirmed count:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedCountValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="2" Grid.Column="0" Text="Last scan source:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="2" Grid.Column="1" x:Name="LastScanSourceValue" TextColor="#FFFFFF" />
-
-                        <Label Grid.Row="3" Grid.Column="0" Text="Last scan time:" TextColor="#E0E0E0" />
-                        <Label Grid.Row="3" Grid.Column="1" x:Name="LastScanTimeValue" TextColor="#FFFFFF" />
-                    </Grid>
+                                <Label Grid.Row="3" Grid.Column="0" Text="Last scan time:" TextColor="#E0E0E0" />
+                                <Label Grid.Row="3" Grid.Column="1" x:Name="LastScanTimeValue" TextColor="#FFFFFF" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
                 </VerticalStackLayout>
             </Frame>
 
