@@ -32,7 +32,8 @@
                            FontAttributes="Bold"
                            FontSize="17" />
 
-                    <Button Text="Add Sample Subscription"
+                    <Button x:Name="AddSampleSubscriptionButton"
+                            Text="Add Sample Subscription"
                             Clicked="OnAddSampleManualClicked"
                             CornerRadius="10"
                             HeightRequest="42"

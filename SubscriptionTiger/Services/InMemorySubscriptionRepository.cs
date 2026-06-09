@@ -157,6 +157,29 @@ public sealed class InMemorySubscriptionRepository
         return true;
     }
 
+    public void RemoveDuplicateSampleSubscriptions()
+    {
+        var uniqueConfirmed = new List<ConfirmedSubscription>(confirmedSubscriptions.Count);
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var subscription in confirmedSubscriptions)
+        {
+            var key = $"{subscription.Vendor.Trim()}|{subscription.Price?.ToString() ?? string.Empty}|{subscription.BillingCycle}";
+            if (keys.Add(key))
+            {
+                uniqueConfirmed.Add(subscription);
+            }
+        }
+
+        if (uniqueConfirmed.Count == confirmedSubscriptions.Count)
+        {
+            return;
+        }
+
+        confirmedSubscriptions.Clear();
+        confirmedSubscriptions.AddRange(uniqueConfirmed);
+    }
+
     public bool ClearAllTestData()
     {
         var hadData = suspectedCandidates.Count > 0 || confirmedSubscriptions.Count > 0;

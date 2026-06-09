@@ -3,6 +3,7 @@ using SubscriptionTiger.Services;
 using SubscriptionTiger.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
+using System.Threading;
 
 namespace SubscriptionTiger;
 
@@ -15,6 +16,7 @@ public partial class MainPage : ContentPage
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
     private readonly DiagnosticsService diagnosticsService = new();
     private readonly IGmailScanService gmailScanService;
+    private readonly SemaphoreSlim sampleAddLock = new(1, 1);
     private ScanResultSummary? lastScanResult;
     private string lastAction = "App opened";
     private string lastScanStatus = "No scan activity yet.";
@@ -27,6 +29,7 @@ public partial class MainPage : ContentPage
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
     private Picker? ManualBillingCycleInput => this.FindByName<Picker>("ManualBillingCyclePicker");
     private DatePicker? ManualRenewalDateInput => this.FindByName<DatePicker>("ManualRenewalDatePicker");
+    private Button? AddSampleSubscriptionInput => this.FindByName<Button>("AddSampleSubscriptionButton");
 
     public MainPage()
     {
@@ -134,22 +137,53 @@ public partial class MainPage : ContentPage
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
     {
-        var added = repository.AddManualSampleIfMissing();
+        _ = HandleAddSampleAsync();
+    }
 
-        if (!added)
+    private async Task HandleAddSampleAsync()
+    {
+        await sampleAddLock.WaitAsync();
+
+        if (AddSampleSubscriptionInput is not null)
         {
-            lastAction = "Sample subscription already exists.";
-            lastScanStatus = "Sample subscription already exists.";
-            RefreshUi();
-            _ = DisplayAlert("Sample Exists", "Sample subscription already exists.", "OK");
-            return;
+            AddSampleSubscriptionInput.IsEnabled = false;
         }
 
-        _ = SaveConfirmedSubscriptionsAsync();
-        diagnosticsService.RecordScan(SubscriptionSource.Manual);
-        lastAction = "Added sample subscription";
-        lastScanStatus = "Sample subscription added.";
-        RefreshUi();
+        try
+        {
+            var storedConfirmed = await localSubscriptionStorageService.LoadConfirmedSubscriptionsAsync();
+            repository.SetConfirmedSubscriptions(storedConfirmed);
+
+            repository.RemoveDuplicateSampleSubscriptions();
+
+            var added = repository.AddManualSampleIfMissing();
+
+            repository.RemoveDuplicateSampleSubscriptions();
+            await SaveConfirmedSubscriptionsAsync();
+
+            if (!added)
+            {
+                lastAction = "Sample subscription already exists.";
+                lastScanStatus = "Sample subscription already exists.";
+                RefreshUi();
+                await DisplayAlert("Sample Exists", "Sample subscription already exists.", "OK");
+                return;
+            }
+
+            diagnosticsService.RecordScan(SubscriptionSource.Manual);
+            lastAction = "Added sample subscription";
+            lastScanStatus = "Sample subscription added.";
+            RefreshUi();
+        }
+        finally
+        {
+            if (AddSampleSubscriptionInput is not null)
+            {
+                AddSampleSubscriptionInput.IsEnabled = true;
+            }
+
+            sampleAddLock.Release();
+        }
     }
 
     private async void OnClearTestDataClicked(object sender, EventArgs e)
