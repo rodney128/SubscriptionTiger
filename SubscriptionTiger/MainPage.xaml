@@ -40,35 +40,63 @@
                            FontSize="12" />
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnGmailSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Gmail" TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold" />
-                        <Label Grid.Column="1" Text="Pending" TextColor="#F5C452" FontSize="12" />
+                        <Label Text="Gmail" TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="Scan"
+                                Clicked="OnScanGmailClicked"
+                                CornerRadius="8"
+                                HeightRequest="30"
+                                MinimumWidthRequest="66"
+                                Padding="10,2"
+                                BackgroundColor="#2E3440"
+                                TextColor="White"
+                                FontSize="12"
+                                FontAttributes="Bold" />
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnOutlookSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Outlook" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                        <Label Text="Outlook" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="Scan"
+                                Clicked="OnScanOutlookClicked"
+                                CornerRadius="8"
+                                HeightRequest="30"
+                                MinimumWidthRequest="66"
+                                Padding="10,2"
+                                BackgroundColor="#2E3440"
+                                TextColor="White"
+                                FontSize="12"
+                                FontAttributes="Bold" />
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnOtherEmailSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Other email" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                        <Label Text="Other Email" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="Scan"
+                                Clicked="OnScanOtherEmailClicked"
+                                CornerRadius="8"
+                                HeightRequest="30"
+                                MinimumWidthRequest="66"
+                                Padding="10,2"
+                                BackgroundColor="#2E3440"
+                                TextColor="White"
+                                FontSize="12"
+                                FontAttributes="Bold" />
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnBankFileSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Bank file" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                        <Label Text="Bank File" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="Scan"
+                                Clicked="OnScanBankFileClicked"
+                                CornerRadius="8"
+                                HeightRequest="30"
+                                MinimumWidthRequest="66"
+                                Padding="10,2"
+                                BackgroundColor="#2E3440"
+                                TextColor="White"
+                                FontSize="12"
+                                FontAttributes="Bold" />
                     </Grid>
 
                     <Button x:Name="ToggleManualEntryButton"

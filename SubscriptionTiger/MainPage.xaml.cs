@@ -61,8 +61,8 @@ public partial class MainPage : ContentPage
     {
         diagnosticsService.RecordGmailOAuthStatus("Scan Gmail tapped");
         var gmailResult = await gmailScanService.ScanInboxAsync(CancellationToken.None);
-        diagnosticsService.RecordEvent("OAuthDiag", $"Scan result mode={gmailResult.ScanMode}; configured={gmailResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(gmailResult.AccessToken)}; message={gmailResult.ResultMessage}");
         var addResult = repository.AddCandidates(gmailResult.Candidates);
+        diagnosticsService.RecordEvent("OAuthDiag", $"Scan result mode={gmailResult.ScanMode}; configured={gmailResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(gmailResult.AccessToken)}; checked={gmailResult.MessagesChecked}; found={addResult.AddedCount}; duplicates={addResult.DuplicateCount}; message={gmailResult.ResultMessage}");
 
         diagnosticsService.RecordScan(SubscriptionSource.Gmail);
         lastScanResult = new ScanResultSummary(
@@ -80,7 +80,7 @@ public partial class MainPage : ContentPage
         lastAction = isOAuthSuccess
             ? "Completed Gmail OAuth sign-in"
             : "Attempted Gmail OAuth sign-in";
-        lastScanStatus = gmailResult.ResultMessage;
+        lastScanStatus = $"{gmailResult.ResultMessage} Checked {gmailResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {gmailResult.ScanMode}; at {gmailResult.ScanTime:yyyy-MM-dd HH:mm}.";
 
         RefreshUi();
 
@@ -147,24 +147,19 @@ public partial class MainPage : ContentPage
         UpdateReviewSectionVisibility();
     }
 
-    private async void OnOutlookSourceTapped(object? sender, TappedEventArgs e)
+    private async void OnScanOutlookClicked(object sender, EventArgs e)
     {
         await ShowPendingSourceMessageAsync("Outlook");
     }
 
-    private async void OnOtherEmailSourceTapped(object? sender, TappedEventArgs e)
+    private async void OnScanOtherEmailClicked(object sender, EventArgs e)
     {
         await ShowPendingSourceMessageAsync("Other email");
     }
 
-    private async void OnBankFileSourceTapped(object? sender, TappedEventArgs e)
+    private async void OnScanBankFileClicked(object sender, EventArgs e)
     {
         await ShowPendingSourceMessageAsync("Bank file");
-    }
-
-    private void OnGmailSourceTapped(object? sender, TappedEventArgs e)
-    {
-        OnScanGmailClicked(this, EventArgs.Empty);
     }
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
@@ -373,7 +368,7 @@ public partial class MainPage : ContentPage
     {
         if (summary.SourceName == "Gmail")
         {
-            return "Gmail connection pending.";
+            return $"Gmail {summary.ScanMode}; checked {summary.ItemsChecked}; found {summary.NewCandidatesFound}; duplicates {summary.DuplicatesSkipped}; {summary.ScanTime:yyyy-MM-dd HH:mm}.";
         }
 
         return $"{summary.SourceName} scan added {summary.NewCandidatesFound} items.";
@@ -418,8 +413,12 @@ public partial class MainPage : ContentPage
 
         stack.Children.Add(CreateTitleLabel(candidate.Vendor));
         var candidatePrice = candidate.Price.HasValue ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
-        stack.Children.Add(CreateDetailLabel($"Price: {candidatePrice} | Cycle: {candidate.BillingCycle}"));
-        stack.Children.Add(CreateDetailLabel($"Confidence: {candidate.ConfidenceScore}% | Source: {candidate.Source}"));
+        var cycleText = candidate.BillingCycle == BillingCycle.Unknown ? "Unknown" : candidate.BillingCycle.ToString();
+        stack.Children.Add(CreateDetailLabel($"Price: {candidatePrice} | Cycle: {cycleText}"));
+        var confidenceBand = ToConfidenceBand(candidate.ConfidenceScore);
+        var confidenceText = confidenceBand == "Low" ? "Low confidence — review manually" : confidenceBand;
+        stack.Children.Add(CreateDetailLabel($"Confidence: {confidenceText} | Source: {candidate.Source}"));
+        stack.Children.Add(CreateDetailLabel($"Reason: {CreateShortReason(candidate.DetectionReason)}"));
 
         var actions = new HorizontalStackLayout { Spacing = 8 };
 
@@ -462,7 +461,9 @@ public partial class MainPage : ContentPage
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
         var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
         stack.Children.Add(CreateDetailLabel($"{confirmedPrice} {subscription.BillingCycle.ToString().ToLowerInvariant()}"));
-        stack.Children.Add(CreateDetailLabel($"Renews: {subscription.RenewalDate:yyyy-MM-dd}"));
+        stack.Children.Add(CreateDetailLabel(subscription.BillingCycle == BillingCycle.Unknown
+            ? "Renews: Unknown"
+            : $"Renews: {subscription.RenewalDate:yyyy-MM-dd}"));
         var monthlyEquivalent = CalculateMonthlyEquivalent(subscription);
         stack.Children.Add(CreateDetailLabel($"Monthly equivalent: {monthlyEquivalent.ToString("C", CultureInfo.CurrentCulture)}"));
 
@@ -492,7 +493,9 @@ public partial class MainPage : ContentPage
 
         return subscription.BillingCycle == BillingCycle.Yearly
             ? decimal.Round(subscription.Price.Value / 12m, 2, MidpointRounding.AwayFromZero)
-            : subscription.Price.Value;
+            : subscription.BillingCycle == BillingCycle.Monthly
+                ? subscription.Price.Value
+                : 0m;
     }
 
     private async Task LoadConfirmedSubscriptionsAsync()
@@ -585,6 +588,31 @@ public partial class MainPage : ContentPage
             BackgroundColor = Color.FromArgb("#1D1D1D"),
             HasShadow = false
         };
+    }
+
+    private static string ToConfidenceBand(int score)
+    {
+        if (score >= 75)
+        {
+            return "High";
+        }
+
+        if (score >= 50)
+        {
+            return "Medium";
+        }
+
+        return "Low";
+    }
+
+    private static string CreateShortReason(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return "matched subscription clues";
+        }
+
+        return reason.Length > 96 ? reason[..96] + "..." : reason;
     }
 
     private static Label CreateTitleLabel(string text)

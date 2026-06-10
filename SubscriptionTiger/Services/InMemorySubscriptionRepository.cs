@@ -63,7 +63,12 @@ public sealed class InMemorySubscriptionRepository
 
         suspectedCandidates.Remove(candidate);
 
-        var renewalDate = DateTime.Today.AddMonths(candidate.BillingCycle == BillingCycle.Monthly ? 1 : 12);
+        var renewalDate = candidate.BillingCycle switch
+        {
+            BillingCycle.Monthly => DateTime.Today.AddMonths(1),
+            BillingCycle.Yearly => DateTime.Today.AddMonths(12),
+            _ => DateTime.Today
+        };
         var confirmed = new ConfirmedSubscription(
             candidate.Id,
             candidate.Vendor,
