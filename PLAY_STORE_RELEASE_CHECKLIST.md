@@ -62,10 +62,14 @@ Before public release, confirm:
 - Signing verification result: `jarsigner -verify` passes and reports signer `CN=SubscriptionTiger, OU=Mobile, O=SubscriptionTiger, L=NA, ST=NA, C=US`.
 
 ## Gmail OAuth Status
-- Internal testing found Google OAuth `Error 400: invalid_request`.
-- Error details showed `redirect_uri=subscriptiontiger://oauth2redirect`.
-- The broken custom URI redirect flow is disabled for internal testing until a proper native Android Google authorization implementation is completed.
-- Gmail scan is currently foundation/pending in internal test builds.
+- Gmail OAuth is working end-to-end in Debug on Android test device.
+- OAuth Android client package: `com.farenoughnorth.subscriptiontiger`.
+- OAuth Android debug SHA-1: `D9:44:22:24:C9:C7:2D:AE:A8:DF:5D:3C:B3:40:B1:27:5E:40:D6:06`.
+- OAuth client ID: `449735589472-shqeavauf9mrhn0o92khgif14s7hm9j0.apps.googleusercontent.com`.
+- OAuth redirect URI: `com.googleusercontent.apps.449735589472-shqeavauf9mrhn0o92khgif14s7hm9j0:/oauth2redirect`.
+- Android callback scheme/path: `com.googleusercontent.apps.449735589472-shqeavauf9mrhn0o92khgif14s7hm9j0` + `/oauth2redirect`.
+- Google branding shown in flow: `SubscriptionTiger by Far Enough North`.
+- Gmail scan is enabled for internal OAuth validation builds.
 - Subscription review workflow remains testable through sample/manual/local data.
 
 ## Play Upload Signing Key Requirement

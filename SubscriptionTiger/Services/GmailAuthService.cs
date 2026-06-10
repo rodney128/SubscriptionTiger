@@ -42,6 +42,9 @@ public sealed class GmailAuthService : IGmailAuthService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        diagnosticsService.RecordGmailOAuthStatus(
+            $"OAuth config client_id={configuration.ClientId} redirect_uri={configuration.RedirectUri}");
+
         var codeVerifier = CreateCodeVerifier();
         var codeChallenge = CreateCodeChallenge(codeVerifier);
         var authorizationUrl = BuildAuthorizationUrl(configuration, codeChallenge);
