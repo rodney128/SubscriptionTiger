@@ -24,12 +24,16 @@ public partial class MainPage : ContentPage
     private bool isDiagnosticsVisible;
     private bool isMoreOptionsVisible;
     private bool isManualEntryVisible;
+    private bool isSuspectedReviewVisible;
+    private bool isConfirmedReviewVisible;
 
     private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
     private Picker? ManualBillingCycleInput => this.FindByName<Picker>("ManualBillingCyclePicker");
     private DatePicker? ManualRenewalDateInput => this.FindByName<DatePicker>("ManualRenewalDatePicker");
     private Button? AddSampleSubscriptionInput => this.FindByName<Button>("AddSampleSubscriptionButton");
+    private Label? SuspectedReviewCountLabel => this.FindByName<Label>("SuspectedReviewCountValue");
+    private Label? ConfirmedReviewCountLabel => this.FindByName<Label>("ConfirmedReviewCountValue");
 
     public MainPage()
     {
@@ -75,7 +79,7 @@ public partial class MainPage : ContentPage
 
         await DisplayAlert(
             "Gmail Pending",
-            "Gmail connection is not enabled in this test build yet. Use a demo or manual subscription to test the review workflow.",
+            "Gmail connection is not enabled in this test build yet. Use a demo or manual subscription to test the Subscription Tiger review workflow.",
             "OK");
     }
 
@@ -113,6 +117,27 @@ public partial class MainPage : ContentPage
     {
         isMoreOptionsVisible = !isMoreOptionsVisible;
         UpdateCollapsibleSectionState();
+    }
+
+    private void OnViewSuspectedClicked(object sender, EventArgs e)
+    {
+        isSuspectedReviewVisible = true;
+        isConfirmedReviewVisible = false;
+        UpdateReviewSectionVisibility();
+    }
+
+    private void OnViewConfirmedClicked(object sender, EventArgs e)
+    {
+        isSuspectedReviewVisible = false;
+        isConfirmedReviewVisible = true;
+        UpdateReviewSectionVisibility();
+    }
+
+    private void OnHideReviewClicked(object sender, EventArgs e)
+    {
+        isSuspectedReviewVisible = false;
+        isConfirmedReviewVisible = false;
+        UpdateReviewSectionVisibility();
     }
 
     private async void OnOutlookSourceTapped(object? sender, TappedEventArgs e)
@@ -304,9 +329,19 @@ public partial class MainPage : ContentPage
         BuildConfirmedSection();
         UpdateConfirmedSummary();
 
-        SuspectedSummaryCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
-        SuspectedCountValue.Text = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
-        ConfirmedCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
+        var suspectedCount = repository.SuspectedCandidates.Count.ToString(CultureInfo.InvariantCulture);
+        var confirmedCount = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
+        SuspectedCountValue.Text = suspectedCount;
+        ConfirmedCountValue.Text = confirmedCount;
+        if (SuspectedReviewCountLabel is not null)
+        {
+            SuspectedReviewCountLabel.Text = suspectedCount;
+        }
+
+        if (ConfirmedReviewCountLabel is not null)
+        {
+            ConfirmedReviewCountLabel.Text = confirmedCount;
+        }
         LastActionValue.Text = lastAction;
         LastScanStatusValue.Text = lastScanStatus;
         GmailOAuthStatusValue.Text = GmailOAuthDiagnosticsMessage;
@@ -343,7 +378,7 @@ public partial class MainPage : ContentPage
 
         if (repository.SuspectedCandidates.Count == 0)
         {
-            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Add a demo subscription or connect a source when scanning is available."));
+            SuspectedContainer.Children.Add(CreateEmptyStateLabel("No suspected subscriptions yet. Connect a source when scanning is available."));
             return;
         }
 
@@ -359,7 +394,7 @@ public partial class MainPage : ContentPage
 
         if (repository.ConfirmedSubscriptions.Count == 0)
         {
-            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Confirmed subscriptions will appear here after you add or approve one."));
+            ConfirmedContainer.Children.Add(CreateEmptyStateLabel("No confirmed subscriptions yet. Add a subscription manually to begin."));
             return;
         }
 
@@ -467,8 +502,6 @@ public partial class MainPage : ContentPage
 
     private void UpdateConfirmedSummary()
     {
-        ConfirmedSummaryCountValue.Text = repository.ConfirmedSubscriptions.Count.ToString(CultureInfo.InvariantCulture);
-
         var estimatedMonthlyTotal = repository.ConfirmedSubscriptions
             .Sum(CalculateMonthlyEquivalent);
         ConfirmedSummaryMonthlyTotalValue.Text = estimatedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
@@ -480,6 +513,7 @@ public partial class MainPage : ContentPage
         HelpSection.IsVisible = isHelpVisible;
         DiagnosticsSection.IsVisible = isDiagnosticsVisible;
         ManualEntryPanel.IsVisible = isManualEntryVisible;
+        UpdateReviewSectionVisibility();
 
         ToggleMoreOptionsButton.Text = isMoreOptionsVisible ? "Hide More Options" : "Show More Options";
         ToggleHelpButton.Text = isHelpVisible ? "Hide Help" : "Show Help";
@@ -576,5 +610,12 @@ public partial class MainPage : ContentPage
             FontSize = 13,
             Margin = new Thickness(0, 6, 0, 0)
         };
+    }
+
+    private void UpdateReviewSectionVisibility()
+    {
+        SuspectedSectionFrame.IsVisible = isSuspectedReviewVisible;
+        ConfirmedSectionFrame.IsVisible = isConfirmedReviewVisible;
+        HideReviewButton.IsVisible = isSuspectedReviewVisible || isConfirmedReviewVisible;
     }
 }

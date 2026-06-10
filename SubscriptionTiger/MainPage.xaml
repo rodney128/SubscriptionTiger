@@ -3,47 +3,73 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SubscriptionTiger.MainPage"
              Title="SubscriptionTiger"
+             Shell.NavBarIsVisible="False"
              BackgroundColor="#111111">
 
     <ScrollView>
         <VerticalStackLayout Padding="16,14,16,96" Spacing="10">
 
-            <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+            <VerticalStackLayout Spacing="4" HorizontalOptions="Fill" VerticalOptions="Start">
                 <Image Source="tigericon.png"
-                       WidthRequest="44"
-                       HeightRequest="44"
+                       WidthRequest="72"
+                       HeightRequest="72"
                        HorizontalOptions="Center"
                        Aspect="AspectFit" />
                 <Label Text="SubscriptionTiger"
                        TextColor="#F5C452"
                        FontSize="22"
                        FontAttributes="Bold"
+                       HorizontalOptions="Center"
                        HorizontalTextAlignment="Center" />
                 <Label Text="Find and manage recurring subscriptions."
                        TextColor="#E0E0E0"
                        FontSize="12"
+                       HorizontalOptions="Center"
                        HorizontalTextAlignment="Center" />
             </VerticalStackLayout>
 
             <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Get Started"
+                    <Label Text="Scan Sources"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="17" />
 
-                    <Label Text="Automatic scanning is still being connected. For now, test the review workflow with a demo subscription or enter one manually."
+                    <Label Text="Automatic scanning is being connected."
                            TextColor="#E0E0E0"
                            FontSize="12" />
 
-                    <Button x:Name="AddSampleSubscriptionButton"
-                            Text="Add Demo Subscription"
-                            Clicked="OnAddSampleManualClicked"
-                            CornerRadius="10"
-                            HeightRequest="42"
-                            BackgroundColor="#CFAF57"
-                            TextColor="Black"
-                            FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnGmailSourceTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="Gmail" TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold" />
+                        <Label Grid.Column="1" Text="Pending" TextColor="#F5C452" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnOutlookSourceTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="Outlook" TextColor="#FFFFFF" FontSize="13" />
+                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnOtherEmailSourceTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="Other email" TextColor="#FFFFFF" FontSize="13" />
+                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBankFileSourceTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="Bank file" TextColor="#FFFFFF" FontSize="13" />
+                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
+                    </Grid>
 
                     <Button x:Name="ToggleManualEntryButton"
                             Text="Add Subscription Manually"
@@ -114,87 +140,75 @@
 
             <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="Scan Sources"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="17" />
-
-                    <Label Text="Automatic scanning is coming soon."
-                           TextColor="#E0E0E0"
-                           FontSize="12" />
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnGmailSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Gmail" TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold" />
-                        <Label Grid.Column="1" Text="Pending" TextColor="#F5C452" FontSize="12" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnOutlookSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Outlook" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnOtherEmailSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Other email" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnBankFileSourceTapped" />
-                        </Grid.GestureRecognizers>
-                        <Label Text="Bank file" TextColor="#FFFFFF" FontSize="13" />
-                        <Label Grid.Column="1" Text="Coming soon" TextColor="#B0B0B0" FontSize="12" />
-                    </Grid>
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="6">
                     <Label Text="Review Summary"
                            TextColor="#F5C452"
                            FontAttributes="Bold"
                            FontSize="17" />
 
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto"
+                          RowDefinitions="Auto"
                           ColumnSpacing="8"
                           RowSpacing="2">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Suspected:" TextColor="#E0E0E0" FontSize="12" />
-                        <Label Grid.Row="0" Grid.Column="1" x:Name="SuspectedSummaryCountValue" TextColor="#FFFFFF" FontSize="12" />
-
-                        <Label Grid.Row="1" Grid.Column="0" Text="Confirmed:" TextColor="#E0E0E0" FontSize="12" />
-                        <Label Grid.Row="1" Grid.Column="1" x:Name="ConfirmedSummaryCountValue" TextColor="#FFFFFF" FontSize="12" />
-
-                        <Label Grid.Row="2" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="12" />
-                        <Label Grid.Row="2" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="12" />
+                        <Label Grid.Row="0" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="12" />
+                        <Label Grid.Row="0" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="12" />
                     </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                        <Button Grid.Row="0"
+                                Grid.ColumnSpan="2"
+                                Text="Suspected Subscriptions"
+                                Clicked="OnViewSuspectedClicked"
+                                CornerRadius="10"
+                                HeightRequest="40"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="#2E3440"
+                                TextColor="White" />
+                        <Label Grid.Row="0"
+                               Grid.Column="1"
+                               x:Name="SuspectedReviewCountValue"
+                               Text="0"
+                               TextColor="#FFFFFF"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               HorizontalOptions="End"
+                               Margin="0,0,14,0"
+                               InputTransparent="True" />
+
+                        <Button Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                Text="Confirmed Subscriptions"
+                                Clicked="OnViewConfirmedClicked"
+                                CornerRadius="10"
+                                HeightRequest="40"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="#2E3440"
+                                TextColor="White" />
+                        <Label Grid.Row="1"
+                               Grid.Column="1"
+                               x:Name="ConfirmedReviewCountValue"
+                               Text="0"
+                               TextColor="#FFFFFF"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               HorizontalOptions="End"
+                               Margin="0,0,14,0"
+                               InputTransparent="True" />
+                    </Grid>
+
+                    <Button x:Name="HideReviewButton"
+                            Text="Back to Summary"
+                            Clicked="OnHideReviewClicked"
+                            CornerRadius="10"
+                            HeightRequest="40"
+                            BackgroundColor="#2E3440"
+                            TextColor="White"
+                            IsVisible="False" />
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Last Activity"
-                           TextColor="#F5C452"
-                           FontAttributes="Bold"
-                           FontSize="17" />
-
-                    <Label x:Name="LastActivityValue"
-                           Text="No scan yet."
-                           TextColor="#B0B0B0"
-                           FontSize="13" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Frame x:Name="SuspectedSectionFrame" CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False" IsVisible="False">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Suspected Subscriptions"
                            TextColor="#F5C452"
@@ -204,7 +218,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+            <Frame x:Name="ConfirmedSectionFrame" CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False" IsVisible="False">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Confirmed Subscriptions"
                            TextColor="#F5C452"
@@ -229,6 +243,14 @@
                         <Button x:Name="ClearTestDataButton"
                                 Text="Clear Test Data"
                                 Clicked="OnClearTestDataClicked"
+                                CornerRadius="10"
+                                HeightRequest="42"
+                                BackgroundColor="#2E3440"
+                                TextColor="White" />
+
+                        <Button x:Name="AddSampleSubscriptionButton"
+                                Text="Add Demo Subscription"
+                                Clicked="OnAddSampleManualClicked"
                                 CornerRadius="10"
                                 HeightRequest="42"
                                 BackgroundColor="#2E3440"
@@ -302,6 +324,20 @@
                             </VerticalStackLayout>
                         </Frame>
                     </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="12" Padding="12" BackgroundColor="#1A1A1A" BorderColor="#3A2E17" HasShadow="False">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Last Activity"
+                           TextColor="#F5C452"
+                           FontAttributes="Bold"
+                           FontSize="17" />
+
+                    <Label x:Name="LastActivityValue"
+                           Text="No scan yet."
+                           TextColor="#B0B0B0"
+                           FontSize="13" />
                 </VerticalStackLayout>
             </Frame>
 

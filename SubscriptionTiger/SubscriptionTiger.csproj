@@ -28,7 +28,7 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
 		<!-- Display name -->
-		<ApplicationTitle>SubscriptionTiger</ApplicationTitle>
+      <ApplicationTitle>Subscription Tiger</ApplicationTitle>
 
 		<!-- App Identifier -->
         <ApplicationId>com.farenoughnorth.subscriptiontiger</ApplicationId>

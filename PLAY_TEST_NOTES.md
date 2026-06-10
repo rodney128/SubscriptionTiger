@@ -1,7 +1,7 @@
-# SubscriptionTiger Internal Test Notes
+# Subscription Tiger Internal Test Notes
 
 ## Test Goal
-Verify that SubscriptionTiger installs, launches, displays the cleaned-up main screen, and allows basic subscription review workflow testing.
+Verify that Subscription Tiger installs, launches, displays the cleaned-up main screen, and allows basic subscription review workflow testing.
 
 ## Minimum Smoke Test
 - Install app

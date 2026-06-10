@@ -1,7 +1,7 @@
-# SubscriptionTiger Play Store Release Checklist
+# Subscription Tiger Play Store Release Checklist
 
 ## App Name
-SubscriptionTiger
+Subscription Tiger
 
 ## Package Name
 com.farenoughnorth.subscriptiontiger
@@ -16,7 +16,7 @@ com.farenoughnorth.subscriptiontiger
 Find and manage recurring subscriptions from supported email and financial sources.
 
 ## Full Description
-SubscriptionTiger helps identify possible recurring subscriptions, review suspected subscriptions, confirm real subscriptions, and manage a clean list of recurring charges.
+Subscription Tiger helps identify possible recurring subscriptions, review suspected subscriptions, confirm real subscriptions, and manage a clean list of recurring charges.
 
 This is an early release intended for testing and validation.
 
@@ -32,7 +32,7 @@ This is an early release intended for testing and validation.
 - Diagnostics available under More Options
 
 ## Privacy Notes
-SubscriptionTiger may process email or financial-file information to detect recurring subscriptions.
+Subscription Tiger may process email or financial-file information to detect recurring subscriptions.
 
 Before public release, confirm:
 - What data is read
