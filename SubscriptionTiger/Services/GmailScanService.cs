@@ -23,15 +23,18 @@ public sealed class GmailScanService : IGmailScanService
 
     private readonly IGmailAuthService authService;
     private readonly HttpClient httpClient;
+    private readonly DiagnosticsService diagnosticsService;
 
-    public GmailScanService(IGmailAuthService authService, HttpClient httpClient)
+    public GmailScanService(IGmailAuthService authService, HttpClient httpClient, DiagnosticsService diagnosticsService)
     {
         this.authService = authService;
         this.httpClient = httpClient;
+        this.diagnosticsService = diagnosticsService;
     }
 
     public async Task<GmailScanResult> ScanInboxAsync(CancellationToken cancellationToken)
     {
+        diagnosticsService.RecordGmailOAuthStatus("Gmail scan started");
         var authResult = await authService.AuthenticateAsync(cancellationToken).ConfigureAwait(false);
         if (!authResult.IsConfigured)
         {
@@ -44,6 +47,8 @@ public sealed class GmailScanService : IGmailScanService
                 ResultMessage: authResult.ResultMessage,
                 ScanTime: DateTime.Now);
         }
+
+        diagnosticsService.RecordGmailOAuthStatus("Google OAuth returned success");
 
         if (!authResult.IsSuccess || string.IsNullOrWhiteSpace(authResult.AccessToken))
         {

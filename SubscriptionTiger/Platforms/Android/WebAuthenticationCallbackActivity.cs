@@ -12,5 +12,5 @@ namespace SubscriptionTiger;
     DataScheme = CallbackScheme)]
 public class WebAuthenticationCallbackActivity : WebAuthenticatorCallbackActivity
 {
-    public const string CallbackScheme = "subscriptiontiger";
+    public const string CallbackScheme = "com.googleusercontent.apps.449735589472-shqeavauf9mrhn0o92khgif14s7hm9j0";
 }

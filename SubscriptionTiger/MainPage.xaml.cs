@@ -9,12 +9,12 @@ namespace SubscriptionTiger;
 
 public partial class MainPage : ContentPage
 {
-    private const string GmailOAuthDiagnosticsMessage = "Disabled pending native Google authorization implementation.";
+    private const string GmailOAuthDiagnosticsMessage = "Google OAuth reads Gmail using read-only scope after successful sign-in.";
     private const string SourcePendingMessage = "Automatic scanning is coming soon. This source is not enabled in this test build yet.";
 
     private readonly InMemorySubscriptionRepository repository;
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
-    private readonly DiagnosticsService diagnosticsService = new();
+    private readonly DiagnosticsService diagnosticsService;
     private readonly IGmailScanService gmailScanService;
     private readonly SemaphoreSlim sampleAddLock = new(1, 1);
     private ScanResultSummary? lastScanResult;
@@ -41,6 +41,7 @@ public partial class MainPage : ContentPage
         gmailScanService = services.GetRequiredService<IGmailScanService>();
         repository = services.GetRequiredService<InMemorySubscriptionRepository>();
         localSubscriptionStorageService = services.GetRequiredService<LocalSubscriptionStorageService>();
+        diagnosticsService = services.GetRequiredService<DiagnosticsService>();
 
         InitializeComponent();
         InitializeManualInputs();
@@ -58,7 +59,9 @@ public partial class MainPage : ContentPage
 
     private async void OnScanGmailClicked(object sender, EventArgs e)
     {
+        diagnosticsService.RecordGmailOAuthStatus("Scan Gmail tapped");
         var gmailResult = await gmailScanService.ScanInboxAsync(CancellationToken.None);
+        diagnosticsService.RecordEvent("OAuthDiag", $"Scan result mode={gmailResult.ScanMode}; configured={gmailResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(gmailResult.AccessToken)}; message={gmailResult.ResultMessage}");
         var addResult = repository.AddCandidates(gmailResult.Candidates);
 
         diagnosticsService.RecordScan(SubscriptionSource.Gmail);
@@ -72,15 +75,19 @@ public partial class MainPage : ContentPage
             ResultMessage: gmailResult.ResultMessage,
             ScanTime: gmailResult.ScanTime);
 
-        lastAction = "Tapped Gmail connection pending";
-        lastScanStatus = "Gmail connection pending for this test build.";
+        var isOAuthSuccess = gmailResult.IsConfigured && !string.IsNullOrWhiteSpace(gmailResult.AccessToken);
+
+        lastAction = isOAuthSuccess
+            ? "Completed Gmail OAuth sign-in"
+            : "Attempted Gmail OAuth sign-in";
+        lastScanStatus = gmailResult.ResultMessage;
 
         RefreshUi();
 
-        await DisplayAlert(
-            "Gmail Pending",
-            "Gmail connection is not enabled in this test build yet. Use a demo or manual subscription to test the Subscription Tiger review workflow.",
-            "OK");
+        if (!isOAuthSuccess)
+        {
+            await DisplayAlert("Gmail Sign-In", gmailResult.ResultMessage, "OK");
+        }
     }
 
     private void OnToggleManualEntryClicked(object sender, EventArgs e)
@@ -344,7 +351,7 @@ public partial class MainPage : ContentPage
         }
         LastActionValue.Text = lastAction;
         LastScanStatusValue.Text = lastScanStatus;
-        GmailOAuthStatusValue.Text = GmailOAuthDiagnosticsMessage;
+        GmailOAuthStatusValue.Text = diagnosticsService.GmailOAuthStatus;
         StorageStatusValue.Text = "Local storage ready";
 
         UpdateLastScanSummaryCard();
