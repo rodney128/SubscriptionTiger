@@ -16,6 +16,7 @@ public partial class MainPage : ContentPage
     private readonly LocalSubscriptionStorageService localSubscriptionStorageService;
     private readonly DiagnosticsService diagnosticsService;
     private readonly IGmailScanService gmailScanService;
+    private readonly IOutlookScanService outlookScanService;
     private readonly SemaphoreSlim sampleAddLock = new(1, 1);
     private ScanResultSummary? lastScanResult;
     private string lastAction = "App opened";
@@ -39,6 +40,7 @@ public partial class MainPage : ContentPage
     {
         var services = MauiProgram.Services ?? throw new InvalidOperationException("Application services are not initialized.");
         gmailScanService = services.GetRequiredService<IGmailScanService>();
+        outlookScanService = services.GetRequiredService<IOutlookScanService>();
         repository = services.GetRequiredService<InMemorySubscriptionRepository>();
         localSubscriptionStorageService = services.GetRequiredService<LocalSubscriptionStorageService>();
         diagnosticsService = services.GetRequiredService<DiagnosticsService>();
@@ -149,7 +151,38 @@ public partial class MainPage : ContentPage
 
     private async void OnScanOutlookClicked(object sender, EventArgs e)
     {
-        await ShowPendingSourceMessageAsync("Outlook");
+        diagnosticsService.RecordEvent("OutlookScan", "Scan Outlook tapped");
+        var outlookResult = await outlookScanService.ScanInboxAsync(CancellationToken.None);
+        var addResult = repository.AddCandidates(outlookResult.Candidates);
+
+        diagnosticsService.RecordEvent(
+            "OutlookScan",
+            $"Scan result mode={outlookResult.ScanMode}; configured={outlookResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(outlookResult.AccessToken)}; checked={outlookResult.MessagesChecked}; found={addResult.AddedCount}; duplicates={addResult.DuplicateCount}; message={outlookResult.ResultMessage}");
+
+        diagnosticsService.RecordScan(SubscriptionSource.Outlook);
+        lastScanResult = new ScanResultSummary(
+            SourceName: "Outlook",
+            ScanMode: outlookResult.ScanMode,
+            ItemsChecked: outlookResult.MessagesChecked,
+            ItemsCheckedLabel: "Messages checked",
+            NewCandidatesFound: addResult.AddedCount,
+            DuplicatesSkipped: addResult.DuplicateCount,
+            ResultMessage: outlookResult.ResultMessage,
+            ScanTime: outlookResult.ScanTime);
+
+        var isAuthSuccess = outlookResult.IsConfigured && !string.IsNullOrWhiteSpace(outlookResult.AccessToken);
+
+        lastAction = isAuthSuccess
+            ? "Completed Outlook OAuth sign-in"
+            : "Attempted Outlook OAuth sign-in";
+        lastScanStatus = $"{outlookResult.ResultMessage} Checked {outlookResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {outlookResult.ScanMode}; at {outlookResult.ScanTime:yyyy-MM-dd HH:mm}.";
+
+        RefreshUi();
+
+        if (!isAuthSuccess)
+        {
+            await DisplayAlert("Outlook Sign-In", outlookResult.ResultMessage, "OK");
+        }
     }
 
     private async void OnScanOtherEmailClicked(object sender, EventArgs e)

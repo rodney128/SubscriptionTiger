@@ -31,6 +31,20 @@ namespace SubscriptionTiger
                     Scope: "https://www.googleapis.com/auth/gmail.readonly",
                     RedirectUri: "com.googleusercontent.apps.449735589472-shqeavauf9mrhn0o92khgif14s7hm9j0:/oauth2redirect"));
 
+            builder.Services.AddSingleton(
+                new OutlookConfiguration(
+                    ClientId: "297661e8-9985-40f7-bec1-b1d74447e59c",
+                    Authority: "https://login.microsoftonline.com/consumers",
+                    RedirectUri: "msauth://com.farenoughnorth.subscriptiontiger/2UQiJMnHLa6o3108s0CxJ15A1gY%3D",
+                    Scopes:
+                    [
+                        "User.Read",
+                        "Mail.Read",
+                        "offline_access"
+                    ]));
+
+            builder.Services.AddSingleton<SubscriptionSignalAnalyzer>();
+
             builder.Services.AddSingleton<IGmailAuthService>(provider =>
                 new GmailAuthService(
                     provider.GetRequiredService<GmailConfiguration>(),
@@ -40,7 +54,18 @@ namespace SubscriptionTiger
                 new GmailScanService(
                     provider.GetRequiredService<IGmailAuthService>(),
                     new HttpClient(),
+                    provider.GetRequiredService<DiagnosticsService>(),
+                    provider.GetRequiredService<SubscriptionSignalAnalyzer>()));
+            builder.Services.AddSingleton<IOutlookAuthService>(provider =>
+                new OutlookAuthService(
+                    provider.GetRequiredService<OutlookConfiguration>(),
                     provider.GetRequiredService<DiagnosticsService>()));
+            builder.Services.AddSingleton<IOutlookScanService>(provider =>
+                new OutlookScanService(
+                    provider.GetRequiredService<IOutlookAuthService>(),
+                    new HttpClient(),
+                    provider.GetRequiredService<DiagnosticsService>(),
+                    provider.GetRequiredService<SubscriptionSignalAnalyzer>()));
             builder.Services.AddSingleton<InMemorySubscriptionRepository>();
             builder.Services.AddSingleton<LocalSubscriptionStorageService>();
             builder.Services.AddSingleton<DiagnosticsService>();
