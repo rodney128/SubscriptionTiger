@@ -2,6 +2,7 @@
 using SubscriptionTiger.Services;
 using SubscriptionTiger.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.ApplicationModel;
 using System.Globalization;
 using System.Threading;
 
@@ -17,6 +18,8 @@ public partial class MainPage : ContentPage
     private readonly DiagnosticsService diagnosticsService;
     private readonly IGmailScanService gmailScanService;
     private readonly IOutlookScanService outlookScanService;
+    private readonly IOtherEmailScanService otherEmailScanService;
+    private readonly IBankFileScanService bankFileScanService;
     private readonly SemaphoreSlim sampleAddLock = new(1, 1);
     private ScanResultSummary? lastScanResult;
     private string lastAction = "App opened";
@@ -25,6 +28,7 @@ public partial class MainPage : ContentPage
     private bool isDiagnosticsVisible;
     private bool isMoreOptionsVisible;
     private bool isManualEntryVisible;
+    private bool isOtherEmailSetupVisible;
     private bool isSuspectedReviewVisible;
     private bool isConfirmedReviewVisible;
 
@@ -33,20 +37,39 @@ public partial class MainPage : ContentPage
     private Picker? ManualBillingCycleInput => this.FindByName<Picker>("ManualBillingCyclePicker");
     private DatePicker? ManualRenewalDateInput => this.FindByName<DatePicker>("ManualRenewalDatePicker");
     private Button? AddSampleSubscriptionInput => this.FindByName<Button>("AddSampleSubscriptionButton");
+    private Frame? OtherEmailSetupPanelInput => this.FindByName<Frame>("OtherEmailSetupPanel");
+    private Picker? OtherEmailPresetPickerInput => this.FindByName<Picker>("OtherEmailPresetPicker");
+    private Entry? OtherEmailAddressEntryInput => this.FindByName<Entry>("OtherEmailAddressEntry");
+    private Entry? OtherEmailServerEntryInput => this.FindByName<Entry>("OtherEmailServerEntry");
+    private Entry? OtherEmailPortEntryInput => this.FindByName<Entry>("OtherEmailPortEntry");
+    private Picker? OtherEmailSecurityPickerInput => this.FindByName<Picker>("OtherEmailSecurityPicker");
+    private Entry? OtherEmailUsernameEntryInput => this.FindByName<Entry>("OtherEmailUsernameEntry");
+    private Entry? OtherEmailPasswordEntryInput => this.FindByName<Entry>("OtherEmailPasswordEntry");
+    private Entry? OtherEmailMaxMessagesEntryInput => this.FindByName<Entry>("OtherEmailMaxMessagesEntry");
+    private Button? OtherEmailStartScanButtonInput => this.FindByName<Button>("OtherEmailStartScanButton");
     private Label? SuspectedReviewCountLabel => this.FindByName<Label>("SuspectedReviewCountValue");
     private Label? ConfirmedReviewCountLabel => this.FindByName<Label>("ConfirmedReviewCountValue");
+    private Button? GmailScanButtonInput => this.FindByName<Button>("GmailScanButton");
+    private ActivityIndicator? GmailScanActivityIndicatorInput => this.FindByName<ActivityIndicator>("GmailScanActivityIndicator");
+    private Label? GmailScanProgressStatusValueInput => this.FindByName<Label>("GmailScanProgressStatusValue");
+    private Button? OutlookScanButtonInput => this.FindByName<Button>("OutlookScanButton");
+    private ActivityIndicator? OutlookScanActivityIndicatorInput => this.FindByName<ActivityIndicator>("OutlookScanActivityIndicator");
+    private Label? OutlookScanProgressStatusValueInput => this.FindByName<Label>("OutlookScanProgressStatusValue");
 
     public MainPage()
     {
         var services = MauiProgram.Services ?? throw new InvalidOperationException("Application services are not initialized.");
         gmailScanService = services.GetRequiredService<IGmailScanService>();
         outlookScanService = services.GetRequiredService<IOutlookScanService>();
+        otherEmailScanService = services.GetRequiredService<IOtherEmailScanService>();
+        bankFileScanService = services.GetRequiredService<IBankFileScanService>();
         repository = services.GetRequiredService<InMemorySubscriptionRepository>();
         localSubscriptionStorageService = services.GetRequiredService<LocalSubscriptionStorageService>();
         diagnosticsService = services.GetRequiredService<DiagnosticsService>();
 
         InitializeComponent();
         InitializeManualInputs();
+        InitializeOtherEmailInputs();
         UpdateCollapsibleSectionState();
 
         _ = LoadConfirmedSubscriptionsAsync();
@@ -61,34 +84,68 @@ public partial class MainPage : ContentPage
 
     private async void OnScanGmailClicked(object sender, EventArgs e)
     {
-        diagnosticsService.RecordGmailOAuthStatus("Scan Gmail tapped");
-        var gmailResult = await gmailScanService.ScanInboxAsync(CancellationToken.None);
-        var addResult = repository.AddCandidates(gmailResult.Candidates);
-        diagnosticsService.RecordEvent("OAuthDiag", $"Scan result mode={gmailResult.ScanMode}; configured={gmailResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(gmailResult.AccessToken)}; checked={gmailResult.MessagesChecked}; found={addResult.AddedCount}; duplicates={addResult.DuplicateCount}; message={gmailResult.ResultMessage}");
-
-        diagnosticsService.RecordScan(SubscriptionSource.Gmail);
-        lastScanResult = new ScanResultSummary(
-            SourceName: "Gmail",
-            ScanMode: gmailResult.ScanMode,
-            ItemsChecked: gmailResult.MessagesChecked,
-            ItemsCheckedLabel: "Messages checked",
-            NewCandidatesFound: addResult.AddedCount,
-            DuplicatesSkipped: addResult.DuplicateCount,
-            ResultMessage: gmailResult.ResultMessage,
-            ScanTime: gmailResult.ScanTime);
-
-        var isOAuthSuccess = gmailResult.IsConfigured && !string.IsNullOrWhiteSpace(gmailResult.AccessToken);
-
-        lastAction = isOAuthSuccess
-            ? "Completed Gmail OAuth sign-in"
-            : "Attempted Gmail OAuth sign-in";
-        lastScanStatus = $"{gmailResult.ResultMessage} Checked {gmailResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {gmailResult.ScanMode}; at {gmailResult.ScanTime:yyyy-MM-dd HH:mm}.";
-
+        diagnosticsService.RecordGmailOAuthStatus("Gmail Scan tapped");
+        UpdateGmailScanVisualState(isRunning: true, "Gmail scan starting...");
         RefreshUi();
 
-        if (!isOAuthSuccess)
+        try
         {
-            await DisplayAlert("Gmail Sign-In", gmailResult.ResultMessage, "OK");
+            diagnosticsService.RecordGmailOAuthStatus("Waiting for Google sign-in");
+            UpdateGmailScanVisualState(isRunning: true, "Waiting for Google sign-in...");
+
+            var gmailScanTask = gmailScanService.ScanInboxAsync(CancellationToken.None);
+            while (!gmailScanTask.IsCompleted)
+            {
+                var currentStatus = diagnosticsService.GmailOAuthStatus;
+                if (!string.IsNullOrWhiteSpace(currentStatus))
+                {
+                    UpdateGmailScanVisualState(isRunning: true, currentStatus);
+                }
+
+                await Task.Delay(200);
+            }
+
+            var gmailResult = await gmailScanTask;
+            var addResult = repository.AddCandidates(gmailResult.Candidates);
+            diagnosticsService.RecordEvent("OAuthDiag", $"Gmail scan completed: checked={gmailResult.MessagesChecked} found={addResult.AddedCount} duplicates={addResult.DuplicateCount}");
+
+            diagnosticsService.RecordScan(SubscriptionSource.Gmail);
+            lastScanResult = new ScanResultSummary(
+                SourceName: "Gmail",
+                ScanMode: gmailResult.ScanMode,
+                ItemsChecked: gmailResult.MessagesChecked,
+                ItemsCheckedLabel: "Messages checked",
+                NewCandidatesFound: addResult.AddedCount,
+                DuplicatesSkipped: addResult.DuplicateCount,
+                ResultMessage: gmailResult.ResultMessage,
+                ScanTime: gmailResult.ScanTime);
+
+            var isOAuthSuccess = gmailResult.IsConfigured && !string.IsNullOrWhiteSpace(gmailResult.AccessToken);
+
+            lastAction = isOAuthSuccess
+                ? "Completed Gmail OAuth sign-in"
+                : "Attempted Gmail OAuth sign-in";
+            lastScanStatus = $"{gmailResult.ResultMessage} Checked {gmailResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {gmailResult.ScanMode}; at {gmailResult.ScanTime:yyyy-MM-dd HH:mm}.";
+
+            var finalGmailStatus = isOAuthSuccess
+                ? $"Gmail scan completed. Checked {gmailResult.MessagesChecked} messages. Found {addResult.AddedCount} suspected subscriptions."
+                : gmailResult.ResultMessage;
+
+            diagnosticsService.RecordGmailOAuthStatus("Updating UI with Gmail scan result");
+            UpdateGmailScanVisualState(isRunning: false, finalGmailStatus);
+            RefreshUi();
+
+            if (!isOAuthSuccess)
+            {
+                await DisplayAlert("Gmail Sign-In", gmailResult.ResultMessage, "OK");
+            }
+        }
+        catch
+        {
+            UpdateGmailScanVisualState(isRunning: false, "Gmail scan failed. Please try again.");
+            lastAction = "Gmail scan failed";
+            lastScanStatus = "Gmail scan failed. Please try again.";
+            RefreshUi();
         }
     }
 
@@ -98,6 +155,20 @@ public partial class MainPage : ContentPage
         lastAction = isManualEntryVisible ? "Expanded manual entry" : "Collapsed manual entry";
         UpdateCollapsibleSectionState();
         RefreshUi();
+    }
+
+    private void OnManualBillingCycleChanged(object sender, EventArgs e)
+    {
+        if (ManualRenewalDateInput is null || ManualBillingCycleInput is null)
+        {
+            return;
+        }
+
+        var selectedCycle = ManualBillingCycleInput.SelectedItem?.ToString() == "Yearly"
+            ? BillingCycle.Yearly
+            : BillingCycle.Monthly;
+
+        ManualRenewalDateInput.Date = DateTime.Today.AddMonths(selectedCycle == BillingCycle.Yearly ? 12 : 1);
     }
 
     private void OnCancelManualEntryClicked(object sender, EventArgs e)
@@ -151,48 +222,259 @@ public partial class MainPage : ContentPage
 
     private async void OnScanOutlookClicked(object sender, EventArgs e)
     {
-        diagnosticsService.RecordEvent("OutlookScan", "Scan Outlook tapped");
-        var outlookResult = await outlookScanService.ScanInboxAsync(CancellationToken.None);
-        var addResult = repository.AddCandidates(outlookResult.Candidates);
-
-        diagnosticsService.RecordEvent(
-            "OutlookScan",
-            $"Scan result mode={outlookResult.ScanMode}; configured={outlookResult.IsConfigured}; hasToken={!string.IsNullOrWhiteSpace(outlookResult.AccessToken)}; checked={outlookResult.MessagesChecked}; found={addResult.AddedCount}; duplicates={addResult.DuplicateCount}; message={outlookResult.ResultMessage}");
-
-        diagnosticsService.RecordScan(SubscriptionSource.Outlook);
-        lastScanResult = new ScanResultSummary(
-            SourceName: "Outlook",
-            ScanMode: outlookResult.ScanMode,
-            ItemsChecked: outlookResult.MessagesChecked,
-            ItemsCheckedLabel: "Messages checked",
-            NewCandidatesFound: addResult.AddedCount,
-            DuplicatesSkipped: addResult.DuplicateCount,
-            ResultMessage: outlookResult.ResultMessage,
-            ScanTime: outlookResult.ScanTime);
-
-        var isAuthSuccess = outlookResult.IsConfigured && !string.IsNullOrWhiteSpace(outlookResult.AccessToken);
-
-        lastAction = isAuthSuccess
-            ? "Completed Outlook OAuth sign-in"
-            : "Attempted Outlook OAuth sign-in";
-        lastScanStatus = $"{outlookResult.ResultMessage} Checked {outlookResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {outlookResult.ScanMode}; at {outlookResult.ScanTime:yyyy-MM-dd HH:mm}.";
-
+        diagnosticsService.RecordEvent("OutlookScan", "Outlook Scan tapped");
+        diagnosticsService.RecordEvent("OutlookScan", "Outlook scan starting...");
+        UpdateOutlookScanVisualState(isRunning: true, "Outlook scan starting...");
         RefreshUi();
 
-        if (!isAuthSuccess)
+        try
         {
-            await DisplayAlert("Outlook Sign-In", outlookResult.ResultMessage, "OK");
+            var outlookScanTask = outlookScanService.ScanInboxAsync(CancellationToken.None);
+            while (!outlookScanTask.IsCompleted)
+            {
+                var currentStatus = diagnosticsService.LastEventCategory == "OutlookScan"
+                    ? diagnosticsService.LastEventMessage
+                    : null;
+
+                if (!string.IsNullOrWhiteSpace(currentStatus))
+                {
+                    UpdateOutlookScanVisualState(isRunning: true, currentStatus);
+                }
+
+                await Task.Delay(200);
+            }
+
+            var outlookResult = await outlookScanTask;
+            var addResult = repository.AddCandidates(outlookResult.Candidates);
+
+            diagnosticsService.RecordScan(SubscriptionSource.Outlook);
+            lastScanResult = new ScanResultSummary(
+                SourceName: "Outlook",
+                ScanMode: outlookResult.ScanMode,
+                ItemsChecked: outlookResult.MessagesChecked,
+                ItemsCheckedLabel: "Messages checked",
+                NewCandidatesFound: addResult.AddedCount,
+                DuplicatesSkipped: addResult.DuplicateCount,
+                ResultMessage: outlookResult.ResultMessage,
+                ScanTime: outlookResult.ScanTime);
+
+            var isAuthSuccess = outlookResult.IsConfigured && !string.IsNullOrWhiteSpace(outlookResult.AccessToken);
+
+            lastAction = isAuthSuccess
+                ? "Completed Outlook OAuth sign-in"
+                : "Attempted Outlook OAuth sign-in";
+            lastScanStatus = $"{outlookResult.ResultMessage} Checked {outlookResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {outlookResult.ScanMode}; at {outlookResult.ScanTime:yyyy-MM-dd HH:mm}.";
+
+            var finalOutlookStatus = isAuthSuccess
+                ? $"Outlook scan completed. Checked {outlookResult.MessagesChecked} messages. Found {addResult.AddedCount} suspected subscriptions."
+                : outlookResult.ResultMessage;
+
+            diagnosticsService.RecordEvent("OutlookScan", "Updating UI with Outlook scan result");
+            UpdateOutlookScanVisualState(isRunning: false, finalOutlookStatus);
+            RefreshUi();
+
+            if (!isAuthSuccess)
+            {
+                await DisplayAlert("Outlook Sign-In", outlookResult.ResultMessage, "OK");
+            }
+        }
+        catch
+        {
+            UpdateOutlookScanVisualState(isRunning: false, "Outlook scan failed. Please try again.");
+            lastAction = "Outlook scan failed";
+            lastScanStatus = "Outlook scan failed. Please try again.";
+            RefreshUi();
         }
     }
 
     private async void OnScanOtherEmailClicked(object sender, EventArgs e)
     {
-        await ShowPendingSourceMessageAsync("Other email");
+        isOtherEmailSetupVisible = true;
+        UpdateCollapsibleSectionState();
+        lastAction = "Opened Other Email IMAP setup";
+        lastScanStatus = "Configure IMAP settings. Scan is read-only.";
+        RefreshUi();
+    }
+
+    private void OnCancelOtherEmailSetupClicked(object sender, EventArgs e)
+    {
+        isOtherEmailSetupVisible = false;
+        if (OtherEmailPasswordEntryInput is not null)
+        {
+            OtherEmailPasswordEntryInput.Text = string.Empty;
+        }
+
+        UpdateCollapsibleSectionState();
+        lastAction = "Canceled Other Email IMAP setup";
+        lastScanStatus = "Other Email scan canceled before authentication.";
+        RefreshUi();
+    }
+
+    private void OnOtherEmailPresetChanged(object sender, EventArgs e)
+    {
+        if (OtherEmailPresetPickerInput is null)
+        {
+            return;
+        }
+
+        var selected = OtherEmailPresetPickerInput.SelectedItem?.ToString() ?? "Generic custom";
+        ApplyOtherEmailPreset(selected);
+    }
+
+    private void OnOtherEmailSecurityModeChanged(object sender, EventArgs e)
+    {
+        if (OtherEmailSecurityPickerInput is null || OtherEmailPortEntryInput is null)
+        {
+            return;
+        }
+
+        var selected = OtherEmailSecurityPickerInput.SelectedItem?.ToString();
+        if (selected == "SSL/TLS")
+        {
+            OtherEmailPortEntryInput.Text = "993";
+        }
+        else if (selected == "STARTTLS")
+        {
+            OtherEmailPortEntryInput.Text = "143";
+        }
+    }
+
+    private async void OnStartOtherEmailImapScanClicked(object sender, EventArgs e)
+    {
+        var validationError = ValidateOtherEmailInputs();
+        if (!string.IsNullOrWhiteSpace(validationError))
+        {
+            await DisplayAlert("Other Email Setup", validationError, "OK");
+            return;
+        }
+
+        if (OtherEmailStartScanButtonInput is not null)
+        {
+            OtherEmailStartScanButtonInput.IsEnabled = false;
+        }
+
+        try
+        {
+            var settings = CreateOtherEmailSettings();
+            var scanResult = await otherEmailScanService.ScanInboxAsync(settings, CancellationToken.None);
+            var addResult = repository.AddCandidates(scanResult.Candidates);
+
+            diagnosticsService.RecordEvent(
+                "OtherEmailScan",
+                $"Scan result mode={scanResult.ScanMode}; configured={scanResult.IsConfigured}; checked={scanResult.MessagesChecked}; found={addResult.AddedCount}; duplicates={addResult.DuplicateCount}; message={scanResult.ResultMessage}");
+
+            diagnosticsService.RecordScan(SubscriptionSource.OtherEmail);
+            lastScanResult = new ScanResultSummary(
+                SourceName: "Other Email",
+                ScanMode: scanResult.ScanMode,
+                ItemsChecked: scanResult.MessagesChecked,
+                ItemsCheckedLabel: "Messages checked",
+                NewCandidatesFound: addResult.AddedCount,
+                DuplicatesSkipped: addResult.DuplicateCount,
+                ResultMessage: scanResult.ResultMessage,
+                ScanTime: scanResult.ScanTime);
+
+            lastAction = scanResult.IsConfigured
+                ? "Completed Other Email IMAP scan"
+                : "Attempted Other Email IMAP scan";
+            lastScanStatus = $"{scanResult.ResultMessage} Checked {scanResult.MessagesChecked}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; mode {scanResult.ScanMode}; at {scanResult.ScanTime:yyyy-MM-dd HH:mm}.";
+
+            isOtherEmailSetupVisible = false;
+            if (OtherEmailPasswordEntryInput is not null)
+            {
+                OtherEmailPasswordEntryInput.Text = string.Empty;
+            }
+
+            UpdateCollapsibleSectionState();
+            RefreshUi();
+
+            if (!scanResult.IsConfigured)
+            {
+                await DisplayAlert("Other Email Scan", scanResult.ResultMessage, "OK");
+            }
+        }
+        finally
+        {
+            if (OtherEmailStartScanButtonInput is not null)
+            {
+                OtherEmailStartScanButtonInput.IsEnabled = true;
+            }
+        }
     }
 
     private async void OnScanBankFileClicked(object sender, EventArgs e)
     {
-        await ShowPendingSourceMessageAsync("Bank file");
+        FileResult? fileResult;
+
+        try
+        {
+            fileResult = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select CSV bank file",
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.Android, ["text/csv", "text/comma-separated-values", "application/csv", "application/vnd.ms-excel", "text/plain"] },
+                    { DevicePlatform.iOS, ["public.comma-separated-values-text"] },
+                    { DevicePlatform.MacCatalyst, ["public.comma-separated-values-text"] },
+                    { DevicePlatform.WinUI, [".csv"] }
+                })
+            });
+        }
+        catch (Exception)
+        {
+            lastAction = "Bank file picker failed to open";
+            lastScanStatus = "Unable to open file picker.";
+            RefreshUi();
+            await DisplayAlert("Bank File", "Unable to open file picker on this device.", "OK");
+            return;
+        }
+
+        if (fileResult is null)
+        {
+            lastAction = "Bank file scan canceled";
+            lastScanStatus = "No file selected.";
+            RefreshUi();
+            return;
+        }
+
+        if (!fileResult.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+        {
+            lastAction = "Bank file rejected";
+            lastScanStatus = "Only CSV files are supported.";
+            RefreshUi();
+            await DisplayAlert("Bank File", "Please select a .csv bank file.", "OK");
+            return;
+        }
+
+        await using var stream = await fileResult.OpenReadAsync();
+        var scanResult = await bankFileScanService.ScanCsvAsync(stream, fileResult.FileName, CancellationToken.None);
+        var addResult = repository.AddCandidates(scanResult.Candidates);
+
+        diagnosticsService.RecordScan(SubscriptionSource.BankFile);
+
+        var summaryMessage = $"Bank CSV scan completed. rows={scanResult.RowsChecked}; parsed={scanResult.TransactionsParsed}; suspected={scanResult.Candidates.Count}; duplicates={addResult.DuplicateCount}; parseErrors={scanResult.ParseErrors}; oldest={scanResult.OldestTransactionDate:yyyy-MM-dd}; newest={scanResult.NewestTransactionDate:yyyy-MM-dd}.";
+        diagnosticsService.RecordEvent("BankFileScan", summaryMessage);
+
+        lastScanResult = new ScanResultSummary(
+            SourceName: "Bank File",
+            ScanMode: scanResult.ScanMode,
+            ItemsChecked: scanResult.RowsChecked,
+            ItemsCheckedLabel: "Rows checked",
+            NewCandidatesFound: addResult.AddedCount,
+            DuplicatesSkipped: addResult.DuplicateCount,
+            ResultMessage: scanResult.ResultMessage,
+            ScanTime: scanResult.ScanTime);
+
+        lastAction = scanResult.IsConfigured
+            ? "Completed Bank File CSV scan"
+            : "Attempted Bank File CSV scan";
+        lastScanStatus = $"{scanResult.ResultMessage} File type {scanResult.FileType}; rows checked {scanResult.RowsChecked}; parsed {scanResult.TransactionsParsed}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; parse errors {scanResult.ParseErrors}.";
+        RefreshUi();
+
+        if (!scanResult.IsConfigured)
+        {
+            await DisplayAlert("Bank File", scanResult.ResultMessage, "OK");
+        }
     }
 
     private void OnAddSampleManualClicked(object? sender, EventArgs e)
@@ -249,9 +531,9 @@ public partial class MainPage : ContentPage
     private async void OnClearTestDataClicked(object sender, EventArgs e)
     {
         var shouldClear = await DisplayAlert(
-            "Clear Test Data",
-            "Clear all local suspected and confirmed subscriptions?",
-            "Clear",
+            "Clear Data?",
+            "This will remove saved local subscriptions and scan results from this device so you can start over. Your email accounts and bank accounts will not be changed.",
+            "Clear Data",
             "Cancel");
 
         if (!shouldClear)
@@ -262,8 +544,8 @@ public partial class MainPage : ContentPage
         repository.ClearAllTestData();
         await SaveConfirmedSubscriptionsAsync();
 
-        lastAction = "Demo/test data cleared.";
-        lastScanStatus = "Demo/test data cleared.";
+        lastAction = "Local data cleared.";
+        lastScanStatus = "Saved local subscriptions and scan results were cleared.";
         RefreshUi();
     }
 
@@ -360,6 +642,12 @@ public partial class MainPage : ContentPage
 
     private void RefreshUi()
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(RefreshUi);
+            return;
+        }
+
         BuildSuspectedSection();
         BuildConfirmedSection();
         UpdateConfirmedSummary();
@@ -381,8 +669,79 @@ public partial class MainPage : ContentPage
         LastScanStatusValue.Text = lastScanStatus;
         GmailOAuthStatusValue.Text = diagnosticsService.GmailOAuthStatus;
         StorageStatusValue.Text = "Local storage ready";
+        if (GmailScanProgressStatusValueInput is not null && string.IsNullOrWhiteSpace(GmailScanProgressStatusValueInput.Text))
+        {
+            GmailScanProgressStatusValueInput.Text = "Idle";
+        }
+
+        if (OutlookScanProgressStatusValueInput is not null && string.IsNullOrWhiteSpace(OutlookScanProgressStatusValueInput.Text))
+        {
+            OutlookScanProgressStatusValueInput.Text = "Idle";
+        }
 
         UpdateLastScanSummaryCard();
+    }
+
+    private void UpdateGmailScanVisualState(bool isRunning, string statusText)
+    {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() => UpdateGmailScanVisualState(isRunning, statusText));
+            return;
+        }
+
+        if (GmailScanButtonInput is not null)
+        {
+            GmailScanButtonInput.IsEnabled = !isRunning;
+        }
+
+        if (GmailScanActivityIndicatorInput is not null)
+        {
+            GmailScanActivityIndicatorInput.IsVisible = isRunning;
+            GmailScanActivityIndicatorInput.IsRunning = isRunning;
+        }
+
+        if (GmailScanProgressStatusValueInput is not null)
+        {
+            GmailScanProgressStatusValueInput.Text = statusText;
+            GmailScanProgressStatusValueInput.TextColor = isRunning
+                ? Color.FromArgb("#F5C452")
+                : statusText.Contains("failed", StringComparison.OrdinalIgnoreCase)
+                    || statusText.Contains("canceled", StringComparison.OrdinalIgnoreCase)
+                    ? Color.FromArgb("#E57373")
+                    : Color.FromArgb("#E0E0E0");
+        }
+    }
+
+    private void UpdateOutlookScanVisualState(bool isRunning, string statusText)
+    {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() => UpdateOutlookScanVisualState(isRunning, statusText));
+            return;
+        }
+
+        if (OutlookScanButtonInput is not null)
+        {
+            OutlookScanButtonInput.IsEnabled = !isRunning;
+        }
+
+        if (OutlookScanActivityIndicatorInput is not null)
+        {
+            OutlookScanActivityIndicatorInput.IsVisible = isRunning;
+            OutlookScanActivityIndicatorInput.IsRunning = isRunning;
+        }
+
+        if (OutlookScanProgressStatusValueInput is not null)
+        {
+            OutlookScanProgressStatusValueInput.Text = statusText;
+            OutlookScanProgressStatusValueInput.TextColor = isRunning
+                ? Color.FromArgb("#F5C452")
+                : statusText.Contains("failed", StringComparison.OrdinalIgnoreCase)
+                    || statusText.Contains("canceled", StringComparison.OrdinalIgnoreCase)
+                    ? Color.FromArgb("#E57373")
+                    : Color.FromArgb("#E0E0E0");
+        }
     }
 
     private void UpdateLastScanSummaryCard()
@@ -402,6 +761,11 @@ public partial class MainPage : ContentPage
         if (summary.SourceName == "Gmail")
         {
             return $"Gmail {summary.ScanMode}; checked {summary.ItemsChecked}; found {summary.NewCandidatesFound}; duplicates {summary.DuplicatesSkipped}; {summary.ScanTime:yyyy-MM-dd HH:mm}.";
+        }
+
+        if (summary.SourceName == "Bank File")
+        {
+            return $"Bank File {summary.ScanMode}; rows {summary.ItemsChecked}; found {summary.NewCandidatesFound}; duplicates {summary.DuplicatesSkipped}; {summary.ScanTime:yyyy-MM-dd HH:mm}.";
         }
 
         return $"{summary.SourceName} scan added {summary.NewCandidatesFound} items.";
@@ -446,11 +810,17 @@ public partial class MainPage : ContentPage
 
         stack.Children.Add(CreateTitleLabel(candidate.Vendor));
         var candidatePrice = candidate.Price.HasValue ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
-        var cycleText = candidate.BillingCycle == BillingCycle.Unknown ? "Unknown" : candidate.BillingCycle.ToString();
+        var cycleText = candidate.BillingCycle switch
+        {
+            BillingCycle.Yearly => "Yearly/Annual",
+            BillingCycle.Monthly => "Monthly",
+            _ => "Unknown"
+        };
         stack.Children.Add(CreateDetailLabel($"Price: {candidatePrice} | Cycle: {cycleText}"));
         var confidenceBand = ToConfidenceBand(candidate.ConfidenceScore);
         var confidenceText = confidenceBand == "Low" ? "Low confidence — review manually" : confidenceBand;
-        stack.Children.Add(CreateDetailLabel($"Confidence: {confidenceText} | Source: {candidate.Source}"));
+        var sourceText = candidate.Source == SubscriptionSource.BankFile ? "Bank File" : candidate.Source.ToString();
+        stack.Children.Add(CreateDetailLabel($"Confidence: {confidenceText} | Source: {sourceText}"));
         stack.Children.Add(CreateDetailLabel($"Reason: {CreateShortReason(candidate.DetectionReason)}"));
 
         var actions = new HorizontalStackLayout { Spacing = 8 };
@@ -490,6 +860,23 @@ public partial class MainPage : ContentPage
     {
         var card = CreateCardContainer();
         var stack = new VerticalStackLayout { Spacing = 3 };
+
+        var sourceLabel = subscription.Source switch
+        {
+            SubscriptionSource.Manual => "Manual",
+            SubscriptionSource.BankFile => "Bank File",
+            SubscriptionSource.OtherEmail => "Other Email",
+            _ => subscription.Source.ToString()
+        };
+
+        if (subscription.Source == SubscriptionSource.Manual)
+        {
+            stack.Children.Add(CreateDetailLabel("Type: Manual"));
+        }
+        else
+        {
+            stack.Children.Add(CreateDetailLabel($"Type: Detected ({sourceLabel})"));
+        }
 
         stack.Children.Add(CreateTitleLabel(subscription.Vendor));
         var confirmedPrice = subscription.Price.HasValue ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture) : "Unknown";
@@ -556,6 +943,11 @@ public partial class MainPage : ContentPage
         HelpSection.IsVisible = isHelpVisible;
         DiagnosticsSection.IsVisible = isDiagnosticsVisible;
         ManualEntryPanel.IsVisible = isManualEntryVisible;
+        if (OtherEmailSetupPanelInput is not null)
+        {
+            OtherEmailSetupPanelInput.IsVisible = isOtherEmailSetupVisible;
+        }
+
         UpdateReviewSectionVisibility();
 
         ToggleMoreOptionsButton.Text = isMoreOptionsVisible ? "Hide More Options" : "Show More Options";
@@ -570,6 +962,12 @@ public partial class MainPage : ContentPage
 
         if (ManualBillingCycleInput is not null)
         {
+            ManualBillingCycleInput.SelectedIndexChanged -= OnManualBillingCycleChanged;
+            ManualBillingCycleInput.SelectedIndexChanged += OnManualBillingCycleChanged;
+        }
+
+        if (ManualBillingCycleInput is not null)
+        {
             ManualBillingCycleInput.SelectedIndex = 0;
         }
 
@@ -577,15 +975,6 @@ public partial class MainPage : ContentPage
         {
             ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
         }
-    }
-
-    private async Task ShowPendingSourceMessageAsync(string sourceName)
-    {
-        lastAction = $"Tapped {sourceName} coming soon";
-        lastScanStatus = SourcePendingMessage;
-        RefreshUi();
-
-        await DisplayAlert(sourceName, SourcePendingMessage, "OK");
     }
 
     private void ClearManualEntryInputs()
@@ -609,6 +998,146 @@ public partial class MainPage : ContentPage
         {
             ManualRenewalDateInput.Date = DateTime.Today.AddMonths(1);
         }
+    }
+
+    private void InitializeOtherEmailInputs()
+    {
+        isOtherEmailSetupVisible = false;
+
+        if (OtherEmailPresetPickerInput is not null)
+        {
+            OtherEmailPresetPickerInput.SelectedIndex = 0;
+        }
+
+        if (OtherEmailSecurityPickerInput is not null)
+        {
+            OtherEmailSecurityPickerInput.SelectedIndex = 0;
+        }
+
+        if (OtherEmailPortEntryInput is not null)
+        {
+            OtherEmailPortEntryInput.Text = "993";
+        }
+
+        if (OtherEmailMaxMessagesEntryInput is not null)
+        {
+            OtherEmailMaxMessagesEntryInput.Text = "40";
+        }
+    }
+
+    private void ApplyOtherEmailPreset(string preset)
+    {
+        if (OtherEmailServerEntryInput is null || OtherEmailPortEntryInput is null || OtherEmailSecurityPickerInput is null)
+        {
+            return;
+        }
+
+        switch (preset)
+        {
+            case "iCloud":
+                OtherEmailServerEntryInput.Text = "imap.mail.me.com";
+                OtherEmailPortEntryInput.Text = "993";
+                OtherEmailSecurityPickerInput.SelectedIndex = 0;
+                break;
+            case "Yahoo":
+                OtherEmailServerEntryInput.Text = "imap.mail.yahoo.com";
+                OtherEmailPortEntryInput.Text = "993";
+                OtherEmailSecurityPickerInput.SelectedIndex = 0;
+                break;
+            case "AOL":
+                OtherEmailServerEntryInput.Text = "imap.aol.com";
+                OtherEmailPortEntryInput.Text = "993";
+                OtherEmailSecurityPickerInput.SelectedIndex = 0;
+                break;
+            default:
+                if (string.IsNullOrWhiteSpace(OtherEmailPortEntryInput.Text))
+                {
+                    OtherEmailPortEntryInput.Text = "993";
+                }
+
+                if (OtherEmailSecurityPickerInput.SelectedIndex < 0)
+                {
+                    OtherEmailSecurityPickerInput.SelectedIndex = 0;
+                }
+                break;
+        }
+    }
+
+    private string? ValidateOtherEmailInputs()
+    {
+        if (string.IsNullOrWhiteSpace(OtherEmailAddressEntryInput?.Text))
+        {
+            return "Email address is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(OtherEmailServerEntryInput?.Text))
+        {
+            return "IMAP server is required.";
+        }
+
+        if (!int.TryParse(OtherEmailPortEntryInput?.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port)
+            || port <= 0
+            || port > 65535)
+        {
+            return "Port must be between 1 and 65535.";
+        }
+
+        if (OtherEmailSecurityPickerInput?.SelectedIndex < 0)
+        {
+            return "Select a security mode.";
+        }
+
+        if (string.IsNullOrWhiteSpace(OtherEmailUsernameEntryInput?.Text))
+        {
+            return "Username is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(OtherEmailPasswordEntryInput?.Text))
+        {
+            return "Password or app password is required.";
+        }
+
+        if (!int.TryParse(OtherEmailMaxMessagesEntryInput?.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var maxMessages)
+            || maxMessages <= 0
+            || maxMessages > 200)
+        {
+            return "Max messages must be between 1 and 200.";
+        }
+
+        return null;
+    }
+
+    private OtherEmailImapSettings CreateOtherEmailSettings()
+    {
+        var securityMode = OtherEmailSecurityPickerInput?.SelectedIndex switch
+        {
+            1 => OtherEmailSecurityMode.StartTls,
+            2 => OtherEmailSecurityMode.None,
+            _ => OtherEmailSecurityMode.SslTls
+        };
+
+        var emailAddress = OtherEmailAddressEntryInput?.Text?.Trim() ?? string.Empty;
+        var username = string.IsNullOrWhiteSpace(OtherEmailUsernameEntryInput?.Text)
+            ? emailAddress
+            : OtherEmailUsernameEntryInput!.Text.Trim();
+
+        return new OtherEmailImapSettings(
+            EmailAddress: emailAddress,
+            ImapServer: OtherEmailServerEntryInput?.Text?.Trim() ?? string.Empty,
+            Port: int.Parse(OtherEmailPortEntryInput?.Text ?? "0", CultureInfo.InvariantCulture),
+            SecurityMode: securityMode,
+            Username: username,
+            Password: OtherEmailPasswordEntryInput?.Text ?? string.Empty,
+            MaxMessages: int.Parse(OtherEmailMaxMessagesEntryInput?.Text ?? "40", CultureInfo.InvariantCulture));
+    }
+
+    private async Task ShowPendingSourceMessageAsync(string sourceName)
+    {
+        lastAction = $"Tapped {sourceName} coming soon";
+        lastScanStatus = SourcePendingMessage;
+        RefreshUi();
+
+        await DisplayAlert(sourceName, SourcePendingMessage, "OK");
     }
 
     private static Frame CreateCardContainer()

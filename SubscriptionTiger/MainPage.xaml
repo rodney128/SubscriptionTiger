@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SubscriptionTiger.MainPage"
-             Title="SubscriptionTiger"
+             Title="Subscription Tiger"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#111111">
 
@@ -11,11 +11,11 @@
 
             <VerticalStackLayout Spacing="4" HorizontalOptions="Fill" VerticalOptions="Start">
                 <Image Source="tigericon.png"
-                       WidthRequest="72"
-                       HeightRequest="72"
+                       WidthRequest="144"
+                       HeightRequest="144"
                        HorizontalOptions="Center"
                        Aspect="AspectFit" />
-                <Label Text="SubscriptionTiger"
+                <Label Text="Subscription Tiger"
                        TextColor="#F5C452"
                        FontSize="22"
                        FontAttributes="Bold"
@@ -35,13 +35,14 @@
                            FontAttributes="Bold"
                            FontSize="17" />
 
-                    <Label Text="Automatic scanning is being connected."
+                    <Label Text="Tap Scan on Gmail to start a real Gmail scan."
                            TextColor="#E0E0E0"
                            FontSize="12" />
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
                         <Label Text="Gmail" TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold" VerticalOptions="Center" />
                         <Button Grid.Column="1"
+                                x:Name="GmailScanButton"
                                 Text="Scan"
                                 Clicked="OnScanGmailClicked"
                                 CornerRadius="8"
@@ -54,9 +55,28 @@
                                 FontAttributes="Bold" />
                     </Grid>
 
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="2,0,2,4">
+                        <ActivityIndicator x:Name="GmailScanActivityIndicator"
+                                           IsRunning="False"
+                                           IsVisible="False"
+                                           Color="#F5C452"
+                                           VerticalOptions="Center"
+                                           WidthRequest="18"
+                                           HeightRequest="18" />
+                        <Label Grid.Column="1"
+                               x:Name="GmailScanProgressStatusValue"
+                               Text="Idle"
+                               TextColor="#E0E0E0"
+                               FontSize="12"
+                               LineBreakMode="WordWrap"
+                               MaxLines="3"
+                               HorizontalOptions="Fill" />
+                    </Grid>
+
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
                         <Label Text="Outlook" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
                         <Button Grid.Column="1"
+                                x:Name="OutlookScanButton"
                                 Text="Scan"
                                 Clicked="OnScanOutlookClicked"
                                 CornerRadius="8"
@@ -67,6 +87,24 @@
                                 TextColor="White"
                                 FontSize="12"
                                 FontAttributes="Bold" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="2,0,2,4">
+                        <ActivityIndicator x:Name="OutlookScanActivityIndicator"
+                                           IsRunning="False"
+                                           IsVisible="False"
+                                           Color="#F5C452"
+                                           VerticalOptions="Center"
+                                           WidthRequest="18"
+                                           HeightRequest="18" />
+                        <Label Grid.Column="1"
+                               x:Name="OutlookScanProgressStatusValue"
+                               Text="Idle"
+                               TextColor="#E0E0E0"
+                               FontSize="12"
+                               LineBreakMode="WordWrap"
+                               MaxLines="3"
+                               HorizontalOptions="Fill" />
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
@@ -83,6 +121,120 @@
                                 FontSize="12"
                                 FontAttributes="Bold" />
                     </Grid>
+
+                    <Frame x:Name="OtherEmailSetupPanel"
+                           IsVisible="False"
+                           CornerRadius="10"
+                           Padding="10"
+                           BackgroundColor="#171717"
+                           BorderColor="#3A2E17"
+                           HasShadow="False">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Other Email IMAP Setup"
+                                   TextColor="#F5C452"
+                                   FontAttributes="Bold"
+                                   FontSize="14" />
+
+                            <Label Text="Read-only inbox scan. Many providers require an app password."
+                                   TextColor="#E0E0E0"
+                                   FontSize="11" />
+
+                            <Picker x:Name="OtherEmailPresetPicker"
+                                    Title="Provider preset"
+                                    SelectedIndexChanged="OnOtherEmailPresetChanged"
+                                    HeightRequest="40"
+                                    TextColor="#FFFFFF"
+                                    BackgroundColor="#2A2A2A">
+                                <Picker.Items>
+                                    <x:String>Generic custom</x:String>
+                                    <x:String>iCloud</x:String>
+                                    <x:String>Yahoo</x:String>
+                                    <x:String>AOL</x:String>
+                                </Picker.Items>
+                            </Picker>
+
+                            <Entry x:Name="OtherEmailAddressEntry"
+                                   Placeholder="Email address"
+                                   Keyboard="Email"
+                                   HeightRequest="40"
+                                   TextColor="#FFFFFF"
+                                   PlaceholderColor="#9B9B9B"
+                                   BackgroundColor="#2A2A2A" />
+
+                            <Grid ColumnDefinitions="*,100" ColumnSpacing="8">
+                                <Entry Grid.Column="0"
+                                       x:Name="OtherEmailServerEntry"
+                                       Placeholder="IMAP server"
+                                       HeightRequest="40"
+                                       TextColor="#FFFFFF"
+                                       PlaceholderColor="#9B9B9B"
+                                       BackgroundColor="#2A2A2A" />
+                                <Entry Grid.Column="1"
+                                       x:Name="OtherEmailPortEntry"
+                                       Placeholder="Port"
+                                       Keyboard="Numeric"
+                                       HeightRequest="40"
+                                       TextColor="#FFFFFF"
+                                       PlaceholderColor="#9B9B9B"
+                                       BackgroundColor="#2A2A2A" />
+                            </Grid>
+
+                            <Picker x:Name="OtherEmailSecurityPicker"
+                                    Title="Security mode"
+                                    SelectedIndexChanged="OnOtherEmailSecurityModeChanged"
+                                    HeightRequest="40"
+                                    TextColor="#FFFFFF"
+                                    BackgroundColor="#2A2A2A">
+                                <Picker.Items>
+                                    <x:String>SSL/TLS</x:String>
+                                    <x:String>STARTTLS</x:String>
+                                    <x:String>None (testing only)</x:String>
+                                </Picker.Items>
+                            </Picker>
+
+                            <Entry x:Name="OtherEmailUsernameEntry"
+                                   Placeholder="Username"
+                                   HeightRequest="40"
+                                   TextColor="#FFFFFF"
+                                   PlaceholderColor="#9B9B9B"
+                                   BackgroundColor="#2A2A2A" />
+
+                            <Entry x:Name="OtherEmailPasswordEntry"
+                                   Placeholder="Password / app password"
+                                   IsPassword="True"
+                                   HeightRequest="40"
+                                   TextColor="#FFFFFF"
+                                   PlaceholderColor="#9B9B9B"
+                                   BackgroundColor="#2A2A2A" />
+
+                            <Entry x:Name="OtherEmailMaxMessagesEntry"
+                                   Placeholder="Max messages to scan"
+                                   Keyboard="Numeric"
+                                   HeightRequest="40"
+                                   TextColor="#FFFFFF"
+                                   PlaceholderColor="#9B9B9B"
+                                   BackgroundColor="#2A2A2A" />
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Button Grid.Column="0"
+                                        x:Name="OtherEmailStartScanButton"
+                                        Text="Start IMAP Scan"
+                                        Clicked="OnStartOtherEmailImapScanClicked"
+                                        CornerRadius="10"
+                                        HeightRequest="40"
+                                        BackgroundColor="#CFAF57"
+                                        TextColor="Black"
+                                        FontAttributes="Bold" />
+                                <Button Grid.Column="1"
+                                        Text="Cancel"
+                                        Clicked="OnCancelOtherEmailSetupClicked"
+                                        CornerRadius="10"
+                                        HeightRequest="40"
+                                        BackgroundColor="#2E3440"
+                                        TextColor="White" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
                         <Label Text="Bank File" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
@@ -269,7 +421,7 @@
 
                     <VerticalStackLayout x:Name="MoreOptionsContent" IsVisible="False" Spacing="8">
                         <Button x:Name="ClearTestDataButton"
-                                Text="Clear Test Data"
+                                Text="Clear Data"
                                 Clicked="OnClearTestDataClicked"
                                 CornerRadius="10"
                                 HeightRequest="42"
@@ -298,10 +450,10 @@
                                        TextColor="#F5C452"
                                        FontAttributes="Bold"
                                        FontSize="16" />
-                                <Label Text="SubscriptionTiger helps you review recurring subscriptions."
+                                <Label Text="Subscription Tiger helps you review recurring subscriptions."
                                        TextColor="#E0E0E0"
                                        FontSize="12" />
-                                <Label Text="Use Add Demo Subscription to create test data quickly."
+                                <Label Text="Use Add Demo Subscription to create sample data quickly."
                                        TextColor="#E0E0E0"
                                        FontSize="12" />
                                 <Label Text="Use Add Subscription Manually to enter a subscription yourself."

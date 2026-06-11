@@ -12,4 +12,6 @@ _private_signing/
 *.pfx
 *.aab
 *.apk
+artifacts_*.txt
+uiautomator_*.xml
 copilot-instructions.md

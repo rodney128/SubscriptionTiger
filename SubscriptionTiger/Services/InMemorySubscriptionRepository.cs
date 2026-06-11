@@ -34,11 +34,11 @@ public sealed class InMemorySubscriptionRepository
         {
             var alreadySuspected = suspectedCandidates.Any(x =>
                 string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
-                && x.Source == candidate.Source);
+                && x.BillingCycle == candidate.BillingCycle);
 
             var alreadyConfirmed = confirmedSubscriptions.Any(x =>
                 string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
-                && x.Source == candidate.Source);
+                && x.BillingCycle == candidate.BillingCycle);
 
             if (alreadySuspected || alreadyConfirmed)
             {
