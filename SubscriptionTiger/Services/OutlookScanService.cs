@@ -93,6 +93,67 @@ public sealed class OutlookScanService : IOutlookScanService
         }
     }
 
+    public async Task<EmailBodyContent?> GetMessageContentAsync(string messageId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(messageId))
+        {
+            return null;
+        }
+
+        var authResult = await authService.AuthenticateAsync(cancellationToken).ConfigureAwait(false);
+        if (!authResult.IsSuccess || string.IsNullOrWhiteSpace(authResult.AccessToken))
+        {
+            return null;
+        }
+
+        var requestUri = $"https://graph.microsoft.com/v1.0/me/messages/{Uri.EscapeDataString(messageId)}?$select=body,bodyPreview";
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
+
+        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        var root = json.RootElement;
+        var bodyPreview = TryGetString(root, "bodyPreview");
+
+        string? html = null;
+        string? plainText = null;
+
+        if (root.TryGetProperty("body", out var bodyElement)
+            && bodyElement.ValueKind == JsonValueKind.Object)
+        {
+            var contentType = TryGetString(bodyElement, "contentType");
+            var content = TryGetString(bodyElement, "content");
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                if (string.Equals(contentType, "html", StringComparison.OrdinalIgnoreCase))
+                {
+                    html = content;
+                }
+                else
+                {
+                    plainText = content;
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            plainText = bodyPreview;
+        }
+
+        if (string.IsNullOrWhiteSpace(html) && string.IsNullOrWhiteSpace(plainText))
+        {
+            return null;
+        }
+
+        return new EmailBodyContent(html, plainText, IsFullBody: true);
+    }
+
     private async Task<(int MessagesChecked, IReadOnlyList<SubscriptionCandidate> Candidates)> GetCandidatesAsync(
         string accessToken,
         CancellationToken cancellationToken)
@@ -175,6 +236,7 @@ public sealed class OutlookScanService : IOutlookScanService
             }
 
             var received = TryGetDateTimeOffset(message, "receivedDateTime");
+            var messageId = TryGetString(message, "id");
 
             candidates.Add(new SubscriptionCandidate(
                 Guid.NewGuid(),
@@ -187,7 +249,8 @@ public sealed class OutlookScanService : IOutlookScanService
                 SourceEmailSubject: subject,
                 SourceEmailSender: sender,
                 SourceEmailDate: received,
-                SourceEmailSnippet: bodyPreview));
+                SourceEmailSnippet: bodyPreview,
+                SourceMessageId: messageId));
         }
 
         var enrichedCandidates = signalAnalyzer.ApplyRecurringEvidence(candidates);

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>SubscriptionTiger.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    The SubscriptionTiger app only targets platform-specific MAUI TFMs (net10.0-android, etc.)
+    and is an executable, so it cannot be referenced directly from a standard test runner.
+    The repository under test and its model dependencies are pure POCOs with no MAUI coupling,
+    so the relevant source files are linked here instead.
+  -->
+  <ItemGroup>
+    <Compile Include="..\SubscriptionTiger\Services\InMemorySubscriptionRepository.cs" Link="Linked\Services\InMemorySubscriptionRepository.cs" />
+    <Compile Include="..\SubscriptionTiger\Services\SubscriptionSignalAnalyzer.cs" Link="Linked\Services\SubscriptionSignalAnalyzer.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\SubscriptionCandidate.cs" Link="Linked\Models\SubscriptionCandidate.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\CandidateAddResult.cs" Link="Linked\Models\CandidateAddResult.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\ConfirmedSubscription.cs" Link="Linked\Models\ConfirmedSubscription.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\BillingCycle.cs" Link="Linked\Models\BillingCycle.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\SubscriptionSource.cs" Link="Linked\Models\SubscriptionSource.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\SubscriptionStatus.cs" Link="Linked\Models\SubscriptionStatus.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

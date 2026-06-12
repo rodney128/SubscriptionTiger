@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using SubscriptionTiger.Models;
 
 namespace SubscriptionTiger.Services;
@@ -32,21 +34,25 @@ public sealed class InMemorySubscriptionRepository
 
         foreach (var candidate in candidates)
         {
-            var alreadySuspected = suspectedCandidates.Any(x =>
-                string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
-                && x.BillingCycle == candidate.BillingCycle);
-
             var alreadyConfirmed = confirmedSubscriptions.Any(x =>
                 string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
                 && x.BillingCycle == candidate.BillingCycle);
 
-            if (alreadySuspected || alreadyConfirmed)
+            if (alreadyConfirmed)
             {
                 duplicateCount++;
                 continue;
             }
 
-            suspectedCandidates.Add(candidate);
+            var existingIndex = suspectedCandidates.FindIndex(x => IsRecurrenceMatch(x, candidate));
+            if (existingIndex >= 0)
+            {
+                suspectedCandidates[existingIndex] = MergeEvidence(suspectedCandidates[existingIndex], candidate);
+                duplicateCount++;
+                continue;
+            }
+
+            suspectedCandidates.Add(InitializeEvidence(candidate));
             addedCount++;
         }
 
@@ -213,5 +219,205 @@ public sealed class InMemorySubscriptionRepository
             && x.Price == SamplePrice);
 
         return sampleExistsInSuspected;
+    }
+
+    private static bool IsRecurrenceMatch(SubscriptionCandidate existing, SubscriptionCandidate incoming)
+    {
+        if (existing.Source != incoming.Source)
+        {
+            return false;
+        }
+
+        if (!string.Equals(NormalizeVendor(existing.Vendor), NormalizeVendor(incoming.Vendor), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return existing.BillingCycle == incoming.BillingCycle
+            || existing.BillingCycle == BillingCycle.Unknown
+            || incoming.BillingCycle == BillingCycle.Unknown;
+    }
+
+    private static SubscriptionCandidate InitializeEvidence(SubscriptionCandidate candidate)
+    {
+        var now = DateTime.Now;
+        var seenIds = new List<string>(candidate.SeenSourceMessageIds);
+        if (!string.IsNullOrWhiteSpace(candidate.SourceMessageId)
+            && !seenIds.Contains(candidate.SourceMessageId))
+        {
+            seenIds.Add(candidate.SourceMessageId);
+        }
+
+        return candidate with
+        {
+            OccurrenceCount = Math.Max(1, candidate.OccurrenceCount),
+            FirstSeenDate = candidate.FirstSeenDate ?? now,
+            LastSeenDate = candidate.LastSeenDate ?? now,
+            LastSourceEmailDate = candidate.LastSourceEmailDate ?? candidate.SourceEmailDate?.LocalDateTime,
+            SeenSourceMessageIds = seenIds
+        };
+    }
+
+    private static SubscriptionCandidate MergeEvidence(SubscriptionCandidate existing, SubscriptionCandidate incoming)
+    {
+        var incomingMessageId = incoming.SourceMessageId;
+        var hasReliableId = !string.IsNullOrWhiteSpace(incomingMessageId);
+
+        // Re-scanning the same mailbox can surface the exact same email again. If we have already
+        // counted this provider message id, treat it as a no-op so OccurrenceCount/confidence are
+        // not inflated. The caller still records it as a duplicate in CandidateAddResult.
+        if (hasReliableId && existing.SeenSourceMessageIds.Contains(incomingMessageId!))
+        {
+            return existing;
+        }
+
+        var occurrenceCount = Math.Max(1, existing.OccurrenceCount) + 1;
+        var now = DateTime.Now;
+
+        var seenIds = existing.SeenSourceMessageIds;
+        if (hasReliableId)
+        {
+            seenIds = new List<string>(existing.SeenSourceMessageIds) { incomingMessageId! };
+        }
+
+        var incomingEmailDate = incoming.SourceEmailDate?.LocalDateTime;
+        var lastSourceEmailDate = MaxDate(existing.LastSourceEmailDate, incomingEmailDate);
+        var firstSeenDate = existing.FirstSeenDate ?? now;
+
+        var bestPrice = existing.Price ?? incoming.Price;
+        var bestCycle = existing.BillingCycle != BillingCycle.Unknown
+            ? existing.BillingCycle
+            : incoming.BillingCycle;
+
+        var recurringAmount = AmountsSimilar(existing.Price, incoming.Price);
+
+        var confidence = Math.Max(existing.ConfidenceScore, incoming.ConfidenceScore);
+        confidence += occurrenceCount >= 3 ? 12 : 6;
+        if (recurringAmount)
+        {
+            confidence += 4;
+        }
+
+        if (occurrenceCount >= 3)
+        {
+            confidence = Math.Max(confidence, 80);
+        }
+        else
+        {
+            confidence = Math.Max(confidence, 60);
+        }
+
+        confidence = Math.Clamp(confidence, 1, 99);
+
+        var summary = BuildRecurringSummary(existing, occurrenceCount, bestCycle, bestPrice, recurringAmount);
+        var detectionReason = AppendRepeatEvidence(existing.DetectionReason, summary);
+
+        return existing with
+        {
+            OccurrenceCount = occurrenceCount,
+            LastSeenDate = now,
+            LastSourceEmailDate = lastSourceEmailDate,
+            FirstSeenDate = firstSeenDate,
+            Price = bestPrice,
+            BillingCycle = bestCycle,
+            ConfidenceScore = confidence,
+            RecurringEvidenceSummary = summary,
+            DetectionReason = detectionReason,
+            SeenSourceMessageIds = seenIds
+        };
+    }
+
+    private static string BuildRecurringSummary(
+        SubscriptionCandidate existing,
+        int occurrenceCount,
+        BillingCycle cycle,
+        decimal? price,
+        bool recurringAmount)
+    {
+        var vendor = string.IsNullOrWhiteSpace(existing.Vendor) ? "vendor" : existing.Vendor;
+        var domain = ExtractDomain(existing.SourceEmailSender);
+        var sourceText = string.IsNullOrWhiteSpace(domain) ? vendor : domain;
+
+        if (cycle == BillingCycle.Monthly)
+        {
+            return recurringAmount && price.HasValue
+                ? $"Recurring monthly evidence: {occurrenceCount} similar emails from {sourceText}, similar amount {price.Value.ToString("C", CultureInfo.CurrentCulture)}."
+                : $"Recurring monthly evidence: {occurrenceCount} similar emails from {sourceText}.";
+        }
+
+        if (cycle == BillingCycle.Yearly)
+        {
+            return recurringAmount && price.HasValue
+                ? $"Recurring yearly evidence: {occurrenceCount} similar emails from {sourceText}, similar amount {price.Value.ToString("C", CultureInfo.CurrentCulture)}."
+                : $"Recurring yearly evidence: {occurrenceCount} similar emails from {sourceText}.";
+        }
+
+        return $"Repeated evidence: {occurrenceCount} similar {vendor} billing emails found.";
+    }
+
+    private static string AppendRepeatEvidence(string existingReason, string summary)
+    {
+        const string marker = " | Repeat evidence: ";
+
+        var baseReason = existingReason;
+        var markerIndex = existingReason.IndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex >= 0)
+        {
+            baseReason = existingReason[..markerIndex];
+        }
+
+        if (string.IsNullOrWhiteSpace(baseReason))
+        {
+            return $"Repeat evidence: {summary}";
+        }
+
+        return $"{baseReason}{marker}{summary}";
+    }
+
+    private static bool AmountsSimilar(decimal? left, decimal? right)
+    {
+        if (!left.HasValue || !right.HasValue)
+        {
+            return false;
+        }
+
+        var tolerance = Math.Max(2m, Math.Min(left.Value, right.Value) * 0.10m);
+        return Math.Abs(left.Value - right.Value) <= tolerance;
+    }
+
+    private static DateTime? MaxDate(DateTime? left, DateTime? right)
+    {
+        if (!left.HasValue)
+        {
+            return right;
+        }
+
+        if (!right.HasValue)
+        {
+            return left;
+        }
+
+        return left.Value >= right.Value ? left : right;
+    }
+
+    private static string ExtractDomain(string? sender)
+    {
+        if (string.IsNullOrWhiteSpace(sender))
+        {
+            return string.Empty;
+        }
+
+        var match = Regex.Match(sender, @"@([A-Za-z0-9.-]+)");
+        return match.Success ? match.Groups[1].Value.ToLowerInvariant() : string.Empty;
+    }
+
+    private static string NormalizeVendor(string? vendor)
+    {
+        if (string.IsNullOrWhiteSpace(vendor))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(vendor.ToLowerInvariant(), "[^a-z0-9]", string.Empty);
     }
 }

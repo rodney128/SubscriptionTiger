@@ -121,6 +121,34 @@ public sealed class SubscriptionSignalAnalyzer
         ("bluehost", "Bluehost")
     ];
 
+    // Known senders for a subset of brands. Used to tell a real vendor email apart from a message that
+    // merely mentions the brand in its text. Only obvious, currently relevant domains are listed.
+    private static readonly Dictionary<string, string[]> TrustedVendorDomains = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Microsoft"] = ["microsoft.com", "live.com", "outlook.com", "office.com", "xbox.com"],
+        ["Netflix"] = ["netflix.com"],
+        ["McAfee"] = ["mcafee.com"]
+    };
+
+    /// <summary>
+    /// Returns the canonical trusted domain for a known vendor from the curated allow-list, if one
+    /// exists. Used by UI helpers (e.g. Cancel Help) to offer a safe "open official website" action
+    /// without ever trusting a raw sender domain or a link parsed from an email body.
+    /// </summary>
+    public static bool TryGetTrustedVendorDomain(string vendor, out string domain)
+    {
+        if (!string.IsNullOrWhiteSpace(vendor)
+            && TrustedVendorDomains.TryGetValue(vendor, out var domains)
+            && domains.Length > 0)
+        {
+            domain = domains[0];
+            return true;
+        }
+
+        domain = string.Empty;
+        return false;
+    }
+
     public bool TryAnalyze(
         string sender,
         string subject,
@@ -319,8 +347,14 @@ public sealed class SubscriptionSignalAnalyzer
         var score = 0;
         var reasonParts = new List<string>();
 
+        var senderDomain = NormalizeSenderDomain(sender);
         var senderMatches = GetMatchedVendors(senderText);
-        var hasVendorSignal = senderMatches.Count > 0;
+        var strongVendorMatches = senderMatches
+            .Where(v => !IsConstrainedVendor(v) || IsStrongVendorMatch(v, senderDomain))
+            .ToList();
+        var hasVendorSignal = strongVendorMatches.Count > 0;
+        var mismatchedBrand = GetMatchedVendors(combinedText)
+            .FirstOrDefault(v => IsConstrainedVendor(v) && !IsStrongVendorMatch(v, senderDomain));
 
         var subjectMatches = GetMatchedTerms(subjectText, PositiveTerms);
         if (subjectMatches.Count > 0)
@@ -339,7 +373,7 @@ public sealed class SubscriptionSignalAnalyzer
         if (hasVendorSignal)
         {
             score += 15;
-            reasonParts.Add($"sender matched {senderMatches[0]}");
+            reasonParts.Add($"sender matched {strongVendorMatches[0]}");
         }
 
         var billingCycle = DetectBillingCycle(combinedText, out var cycleDetected);
@@ -354,6 +388,12 @@ public sealed class SubscriptionSignalAnalyzer
         {
             score += 12;
             reasonParts.Add("price was visible");
+        }
+
+        if (mismatchedBrand is not null)
+        {
+            var displayDomain = string.IsNullOrWhiteSpace(senderDomain) ? "unknown" : senderDomain;
+            reasonParts.Insert(0, $"Brand mention only: {mismatchedBrand} mentioned, sender domain {displayDomain} not trusted for {mismatchedBrand}");
         }
 
         if (ContainsAny(combinedText, ["newsletter", "sale", "promo", "promotion", "deal"]) && !hasPaymentSignal)
@@ -399,6 +439,11 @@ public sealed class SubscriptionSignalAnalyzer
         }
 
         if (confidenceBand == ConfidenceBand.High && !(hasPaymentSignal && (price.HasValue || cycleDetected || hasVendorSignal)))
+        {
+            confidenceBand = ConfidenceBand.Medium;
+        }
+
+        if (mismatchedBrand is not null && confidenceBand == ConfidenceBand.High)
         {
             confidenceBand = ConfidenceBand.Medium;
         }
@@ -602,6 +647,57 @@ public sealed class SubscriptionSignalAnalyzer
         return vendors;
     }
 
+    private static bool IsConstrainedVendor(string vendor)
+        => TrustedVendorDomains.ContainsKey(vendor);
+
+    // A known brand is "strong" only when the sender domain is trusted for it (or the domain itself
+    // carries the brand). A brand appearing solely in the display name or body is not a strong match.
+    private static bool IsStrongVendorMatch(string vendor, string senderDomain)
+    {
+        if (IsDomainTrustedForVendor(vendor, senderDomain))
+        {
+            return true;
+        }
+
+        var clue = GetClueForVendor(vendor);
+        return !string.IsNullOrEmpty(clue)
+            && !string.IsNullOrWhiteSpace(senderDomain)
+            && senderDomain.Contains(clue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDomainTrustedForVendor(string vendor, string senderDomain)
+    {
+        if (string.IsNullOrWhiteSpace(senderDomain)
+            || !TrustedVendorDomains.TryGetValue(vendor, out var trustedDomains))
+        {
+            return false;
+        }
+
+        foreach (var trusted in trustedDomains)
+        {
+            if (string.Equals(senderDomain, trusted, StringComparison.OrdinalIgnoreCase)
+                || senderDomain.EndsWith("." + trusted, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetClueForVendor(string vendor)
+    {
+        foreach (var (clue, candidateVendor) in VendorClues)
+        {
+            if (string.Equals(candidateVendor, vendor, StringComparison.OrdinalIgnoreCase))
+            {
+                return clue;
+            }
+        }
+
+        return string.Empty;
+    }
+
     private static BillingCycle DetectBillingCycle(string combinedText, out bool detected)
     {
         if (ContainsAny(combinedText, YearlyTerms))
@@ -640,14 +736,30 @@ public sealed class SubscriptionSignalAnalyzer
 
     private static string DeriveVendorName(string sender, string subject, string snippet)
     {
+        var senderDomain = NormalizeSenderDomain(sender);
         var knownVendors = GetMatchedVendors($"{sender} {subject} {snippet}");
-        if (knownVendors.Count > 0)
+
+        // Prefer a brand that the sender domain actually corroborates (or an unconstrained brand).
+        var strongVendor = knownVendors
+            .FirstOrDefault(v => !IsConstrainedVendor(v) || IsStrongVendorMatch(v, senderDomain));
+        if (strongVendor is not null)
         {
-            return knownVendors[0];
+            return strongVendor;
         }
 
+        // Remaining matches are constrained brands on untrusted domains (text mentions only).
+        // Fall through to the sender-derived identity instead of trusting the brand text.
+        var weakBrandClues = knownVendors
+            .Where(v => IsConstrainedVendor(v) && !IsStrongVendorMatch(v, senderDomain))
+            .Select(GetClueForVendor)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .ToList();
+
         var senderName = sender.Split('<')[0].Trim('"', ' ', '\t');
-        if (!string.IsNullOrWhiteSpace(senderName)
+        var senderNameEchoesBrand = weakBrandClues.Any(c => senderName.Contains(c, StringComparison.OrdinalIgnoreCase));
+
+        if (!senderNameEchoesBrand
+            && !string.IsNullOrWhiteSpace(senderName)
             && !senderName.Contains('@', StringComparison.Ordinal)
             && senderName.Length <= 80)
         {

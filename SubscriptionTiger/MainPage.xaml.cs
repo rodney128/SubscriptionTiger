@@ -31,6 +31,10 @@ public partial class MainPage : ContentPage
     private bool isOtherEmailSetupVisible;
     private bool isSuspectedReviewVisible;
     private bool isConfirmedReviewVisible;
+    private bool isGmailScanning;
+    private bool isOutlookScanning;
+    private bool isOtherEmailScanning;
+    private bool isBankFileScanning;
 
     private Entry? ManualVendorInput => this.FindByName<Entry>("ManualVendorEntry");
     private Entry? ManualPriceInput => this.FindByName<Entry>("ManualPriceEntry");
@@ -55,6 +59,11 @@ public partial class MainPage : ContentPage
     private Button? OutlookScanButtonInput => this.FindByName<Button>("OutlookScanButton");
     private ActivityIndicator? OutlookScanActivityIndicatorInput => this.FindByName<ActivityIndicator>("OutlookScanActivityIndicator");
     private Label? OutlookScanProgressStatusValueInput => this.FindByName<Label>("OutlookScanProgressStatusValue");
+    private Button? BankFileScanButtonInput => this.FindByName<Button>("BankFileScanButton");
+    private ScrollView? MainScrollViewInput => this.FindByName<ScrollView>("MainScrollView");
+    private Label? ConfirmedSummaryMonthlyTotalValueInput => this.FindByName<Label>("ConfirmedSummaryMonthlyTotalValue");
+    private Label? SuspectedSummaryMonthlyTotalValueInput => this.FindByName<Label>("SuspectedSummaryMonthlyTotalValue");
+    private Label? PossibleSummaryMonthlyTotalValueInput => this.FindByName<Label>("PossibleSummaryMonthlyTotalValue");
 
     public MainPage()
     {
@@ -84,6 +93,12 @@ public partial class MainPage : ContentPage
 
     private async void OnScanGmailClicked(object sender, EventArgs e)
     {
+        if (isGmailScanning)
+        {
+            return;
+        }
+
+        isGmailScanning = true;
         diagnosticsService.RecordGmailOAuthStatus("Gmail Scan tapped");
         UpdateGmailScanVisualState(isRunning: true, "Gmail scan starting...");
         RefreshUi();
@@ -147,6 +162,10 @@ public partial class MainPage : ContentPage
             lastScanStatus = "Gmail scan failed. Please try again.";
             RefreshUi();
         }
+        finally
+        {
+            isGmailScanning = false;
+        }
     }
 
     private void OnToggleManualEntryClicked(object sender, EventArgs e)
@@ -199,18 +218,31 @@ public partial class MainPage : ContentPage
         UpdateCollapsibleSectionState();
     }
 
-    private void OnViewSuspectedClicked(object sender, EventArgs e)
+    private async void OnViewSuspectedClicked(object sender, EventArgs e)
     {
         isSuspectedReviewVisible = true;
         isConfirmedReviewVisible = false;
         UpdateReviewSectionVisibility();
+        await ScrollToSectionAsync(SuspectedSectionFrame);
     }
 
-    private void OnViewConfirmedClicked(object sender, EventArgs e)
+    private async void OnViewConfirmedClicked(object sender, EventArgs e)
     {
         isSuspectedReviewVisible = false;
         isConfirmedReviewVisible = true;
         UpdateReviewSectionVisibility();
+        await ScrollToSectionAsync(ConfirmedSectionFrame);
+    }
+
+    private async Task ScrollToSectionAsync(VisualElement? section)
+    {
+        if (section is null || MainScrollViewInput is null)
+        {
+            return;
+        }
+
+        await Task.Delay(50);
+        await MainScrollViewInput.ScrollToAsync(section, ScrollToPosition.Start, true);
     }
 
     private void OnHideReviewClicked(object sender, EventArgs e)
@@ -222,6 +254,12 @@ public partial class MainPage : ContentPage
 
     private async void OnScanOutlookClicked(object sender, EventArgs e)
     {
+        if (isOutlookScanning)
+        {
+            return;
+        }
+
+        isOutlookScanning = true;
         diagnosticsService.RecordEvent("OutlookScan", "Outlook Scan tapped");
         diagnosticsService.RecordEvent("OutlookScan", "Outlook scan starting...");
         UpdateOutlookScanVisualState(isRunning: true, "Outlook scan starting...");
@@ -285,6 +323,10 @@ public partial class MainPage : ContentPage
             lastScanStatus = "Outlook scan failed. Please try again.";
             RefreshUi();
         }
+        finally
+        {
+            isOutlookScanning = false;
+        }
     }
 
     private async void OnScanOtherEmailClicked(object sender, EventArgs e)
@@ -341,6 +383,11 @@ public partial class MainPage : ContentPage
 
     private async void OnStartOtherEmailImapScanClicked(object sender, EventArgs e)
     {
+        if (isOtherEmailScanning)
+        {
+            return;
+        }
+
         var validationError = ValidateOtherEmailInputs();
         if (!string.IsNullOrWhiteSpace(validationError))
         {
@@ -348,6 +395,7 @@ public partial class MainPage : ContentPage
             return;
         }
 
+        isOtherEmailScanning = true;
         if (OtherEmailStartScanButtonInput is not null)
         {
             OtherEmailStartScanButtonInput.IsEnabled = false;
@@ -395,6 +443,7 @@ public partial class MainPage : ContentPage
         }
         finally
         {
+            isOtherEmailScanning = false;
             if (OtherEmailStartScanButtonInput is not null)
             {
                 OtherEmailStartScanButtonInput.IsEnabled = true;
@@ -404,6 +453,11 @@ public partial class MainPage : ContentPage
 
     private async void OnScanBankFileClicked(object sender, EventArgs e)
     {
+        if (isBankFileScanning)
+        {
+            return;
+        }
+
         FileResult? fileResult;
 
         try
@@ -446,34 +500,51 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        await using var stream = await fileResult.OpenReadAsync();
-        var scanResult = await bankFileScanService.ScanCsvAsync(stream, fileResult.FileName, CancellationToken.None);
-        var addResult = repository.AddCandidates(scanResult.Candidates);
-
-        diagnosticsService.RecordScan(SubscriptionSource.BankFile);
-
-        var summaryMessage = $"Bank CSV scan completed. rows={scanResult.RowsChecked}; parsed={scanResult.TransactionsParsed}; suspected={scanResult.Candidates.Count}; duplicates={addResult.DuplicateCount}; parseErrors={scanResult.ParseErrors}; oldest={scanResult.OldestTransactionDate:yyyy-MM-dd}; newest={scanResult.NewestTransactionDate:yyyy-MM-dd}.";
-        diagnosticsService.RecordEvent("BankFileScan", summaryMessage);
-
-        lastScanResult = new ScanResultSummary(
-            SourceName: "Bank File",
-            ScanMode: scanResult.ScanMode,
-            ItemsChecked: scanResult.RowsChecked,
-            ItemsCheckedLabel: "Rows checked",
-            NewCandidatesFound: addResult.AddedCount,
-            DuplicatesSkipped: addResult.DuplicateCount,
-            ResultMessage: scanResult.ResultMessage,
-            ScanTime: scanResult.ScanTime);
-
-        lastAction = scanResult.IsConfigured
-            ? "Completed Bank File CSV scan"
-            : "Attempted Bank File CSV scan";
-        lastScanStatus = $"{scanResult.ResultMessage} File type {scanResult.FileType}; rows checked {scanResult.RowsChecked}; parsed {scanResult.TransactionsParsed}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; parse errors {scanResult.ParseErrors}.";
-        RefreshUi();
-
-        if (!scanResult.IsConfigured)
+        isBankFileScanning = true;
+        if (BankFileScanButtonInput is not null)
         {
-            await DisplayAlert("Bank File", scanResult.ResultMessage, "OK");
+            BankFileScanButtonInput.IsEnabled = false;
+        }
+
+        try
+        {
+            await using var stream = await fileResult.OpenReadAsync();
+            var scanResult = await bankFileScanService.ScanCsvAsync(stream, fileResult.FileName, CancellationToken.None);
+            var addResult = repository.AddCandidates(scanResult.Candidates);
+
+            diagnosticsService.RecordScan(SubscriptionSource.BankFile);
+
+            var summaryMessage = $"Bank CSV scan completed. rows={scanResult.RowsChecked}; parsed={scanResult.TransactionsParsed}; suspected={scanResult.Candidates.Count}; duplicates={addResult.DuplicateCount}; parseErrors={scanResult.ParseErrors}; oldest={scanResult.OldestTransactionDate:yyyy-MM-dd}; newest={scanResult.NewestTransactionDate:yyyy-MM-dd}.";
+            diagnosticsService.RecordEvent("BankFileScan", summaryMessage);
+
+            lastScanResult = new ScanResultSummary(
+                SourceName: "Bank File",
+                ScanMode: scanResult.ScanMode,
+                ItemsChecked: scanResult.RowsChecked,
+                ItemsCheckedLabel: "Rows checked",
+                NewCandidatesFound: addResult.AddedCount,
+                DuplicatesSkipped: addResult.DuplicateCount,
+                ResultMessage: scanResult.ResultMessage,
+                ScanTime: scanResult.ScanTime);
+
+            lastAction = scanResult.IsConfigured
+                ? "Completed Bank File CSV scan"
+                : "Attempted Bank File CSV scan";
+            lastScanStatus = $"{scanResult.ResultMessage} File type {scanResult.FileType}; rows checked {scanResult.RowsChecked}; parsed {scanResult.TransactionsParsed}; found {addResult.AddedCount}; duplicates {addResult.DuplicateCount}; parse errors {scanResult.ParseErrors}.";
+            RefreshUi();
+
+            if (!scanResult.IsConfigured)
+            {
+                await DisplayAlert("Bank File", scanResult.ResultMessage, "OK");
+            }
+        }
+        finally
+        {
+            isBankFileScanning = false;
+            if (BankFileScanButtonInput is not null)
+            {
+                BankFileScanButtonInput.IsEnabled = true;
+            }
         }
     }
 
@@ -639,6 +710,141 @@ public partial class MainPage : ContentPage
             return;
         }
 
+        await ShowEmailForCandidateAsync(candidate);
+    }
+
+    private async Task ShowEmailForCandidateAsync(SubscriptionCandidate candidate)
+    {
+        EmailBodyContent? body = null;
+        try
+        {
+            body = await TryFetchEmailBodyAsync(candidate, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            body = null;
+        }
+
+        if (body is null || !body.HasContent)
+        {
+            await ShowEmailEvidenceFallbackAsync(candidate);
+            return;
+        }
+
+        await Navigation.PushModalAsync(new EmailViewerPage(candidate, body));
+    }
+
+    private async void OnSuspectedCancelHelpClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
+        {
+            return;
+        }
+
+        var candidate = repository.SuspectedCandidates.FirstOrDefault(x => x.Id == id);
+        if (candidate is null)
+        {
+            return;
+        }
+
+        await Navigation.PushModalAsync(new CancelHelpPage(BuildSuspectedCancelHelpContext(candidate)));
+    }
+
+    private async void OnConfirmedCancelHelpClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
+        {
+            return;
+        }
+
+        var subscription = repository.ConfirmedSubscriptions.FirstOrDefault(x => x.Id == id);
+        if (subscription is null)
+        {
+            return;
+        }
+
+        await Navigation.PushModalAsync(new CancelHelpPage(BuildConfirmedCancelHelpContext(subscription)));
+    }
+
+    private CancelHelpContext BuildSuspectedCancelHelpContext(SubscriptionCandidate candidate)
+    {
+        var priceText = candidate.Price.HasValue
+            ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture)
+            : "Unknown";
+        var cycleText = ToCycleText(candidate.BillingCycle);
+        var sourceText = ToSourceText(candidate.Source);
+        var confidenceBand = ToConfidenceBand(candidate.ConfidenceScore);
+        var confidenceText = confidenceBand == "Low" ? "Low confidence — review manually" : confidenceBand;
+
+        var latestDate = candidate.LastSourceEmailDate ?? candidate.SourceEmailDate?.LocalDateTime;
+        var latestDateText = latestDate.HasValue
+            ? latestDate.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture)
+            : null;
+
+        return new CancelHelpContext(
+            Vendor: candidate.Vendor,
+            PriceText: priceText,
+            CycleText: cycleText,
+            SourceText: sourceText,
+            ConfidenceText: confidenceText,
+            Sender: string.IsNullOrWhiteSpace(candidate.SourceEmailSender) ? null : candidate.SourceEmailSender,
+            LatestEmailDateText: latestDateText,
+            RepeatEvidence: string.IsNullOrWhiteSpace(candidate.RecurringEvidenceSummary) ? null : candidate.RecurringEvidenceSummary,
+            DetectionReason: string.IsNullOrWhiteSpace(candidate.DetectionReason) ? null : candidate.DetectionReason,
+            SafeWebsiteUrl: ResolveSafeWebsiteUrl(candidate.Vendor),
+            ViewSourceEmailAsync: () => ShowEmailForCandidateAsync(candidate));
+    }
+
+    private CancelHelpContext BuildConfirmedCancelHelpContext(ConfirmedSubscription subscription)
+    {
+        var priceText = subscription.Price.HasValue
+            ? subscription.Price.Value.ToString("C", CultureInfo.CurrentCulture)
+            : "Unknown";
+
+        return new CancelHelpContext(
+            Vendor: subscription.Vendor,
+            PriceText: priceText,
+            CycleText: ToCycleText(subscription.BillingCycle),
+            SourceText: ToSourceText(subscription.Source),
+            SafeWebsiteUrl: ResolveSafeWebsiteUrl(subscription.Vendor));
+    }
+
+    private static string? ResolveSafeWebsiteUrl(string vendor)
+        => SubscriptionSignalAnalyzer.TryGetTrustedVendorDomain(vendor, out var domain)
+            ? $"https://{domain}"
+            : null;
+
+    private static string ToCycleText(BillingCycle billingCycle) => billingCycle switch
+    {
+        BillingCycle.Yearly => "Yearly/Annual",
+        BillingCycle.Monthly => "Monthly",
+        _ => "Unknown"
+    };
+
+    private static string ToSourceText(SubscriptionSource source) => source switch
+    {
+        SubscriptionSource.BankFile => "Bank File",
+        SubscriptionSource.OtherEmail => "Other Email",
+        _ => source.ToString()
+    };
+
+    private async Task<EmailBodyContent?> TryFetchEmailBodyAsync(SubscriptionCandidate candidate, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(candidate.SourceMessageId))
+        {
+            return null;
+        }
+
+        return candidate.Source switch
+        {
+            SubscriptionSource.Gmail => await gmailScanService.GetMessageContentAsync(candidate.SourceMessageId, cancellationToken),
+            SubscriptionSource.Outlook => await outlookScanService.GetMessageContentAsync(candidate.SourceMessageId, cancellationToken),
+            _ => null
+        };
+    }
+
+    private async Task ShowEmailEvidenceFallbackAsync(SubscriptionCandidate candidate)
+    {
         var sourceText = candidate.Source switch
         {
             SubscriptionSource.BankFile => "Bank File",
@@ -877,6 +1083,21 @@ public partial class MainPage : ContentPage
         stack.Children.Add(CreateDetailLabel($"Confidence: {confidenceText} | Source: {sourceText}"));
         stack.Children.Add(CreateDetailLabel($"Reason: {CreateShortReason(candidate.DetectionReason)}"));
 
+        if (candidate.OccurrenceCount > 1 || !string.IsNullOrWhiteSpace(candidate.RecurringEvidenceSummary))
+        {
+            var repeatText = !string.IsNullOrWhiteSpace(candidate.RecurringEvidenceSummary)
+                ? candidate.RecurringEvidenceSummary
+                : $"Seen {candidate.OccurrenceCount} times — repeat billing evidence.";
+
+            stack.Children.Add(new Label
+            {
+                Text = $"🔁 {repeatText}",
+                TextColor = Color.FromArgb("#CFAF57"),
+                FontSize = 12,
+                FontAttributes = FontAttributes.Bold
+            });
+        }
+
         var actions = new HorizontalStackLayout { Spacing = 8 };
 
         var saveButton = new Button
@@ -932,6 +1153,19 @@ public partial class MainPage : ContentPage
         actions.Children.Add(viewEmailButton);
         stack.Children.Add(actions);
 
+        var cancelHelpButton = new Button
+        {
+            Text = "Cancel Help",
+            BackgroundColor = Color.FromArgb("#2E3440"),
+            TextColor = Colors.White,
+            CornerRadius = 10,
+            HeightRequest = 36,
+            FontSize = 12,
+            CommandParameter = candidate.Id.ToString()
+        };
+        cancelHelpButton.Clicked += OnSuspectedCancelHelpClicked;
+        stack.Children.Add(cancelHelpButton);
+
         card.Content = stack;
         return card;
     }
@@ -967,6 +1201,19 @@ public partial class MainPage : ContentPage
         var monthlyEquivalent = CalculateMonthlyEquivalent(subscription);
         stack.Children.Add(CreateDetailLabel($"Monthly equivalent: {monthlyEquivalent.ToString("C", CultureInfo.CurrentCulture)}"));
 
+        var cancelHelpButton = new Button
+        {
+            Text = "Cancel Help",
+            BackgroundColor = Color.FromArgb("#2E3440"),
+            TextColor = Colors.White,
+            CornerRadius = 10,
+            HeightRequest = 36,
+            Padding = new Thickness(10, 5),
+            CommandParameter = subscription.Id.ToString()
+        };
+        cancelHelpButton.Clicked += OnConfirmedCancelHelpClicked;
+        stack.Children.Add(cancelHelpButton);
+
         var deleteButton = new Button
         {
             Text = "Remove",
@@ -985,16 +1232,19 @@ public partial class MainPage : ContentPage
     }
 
     private static decimal CalculateMonthlyEquivalent(ConfirmedSubscription subscription)
+        => CalculateMonthlyEquivalent(subscription.Price, subscription.BillingCycle);
+
+    private static decimal CalculateMonthlyEquivalent(decimal? price, BillingCycle billingCycle)
     {
-        if (!subscription.Price.HasValue)
+        if (!price.HasValue)
         {
             return 0m;
         }
 
-        return subscription.BillingCycle == BillingCycle.Yearly
-            ? decimal.Round(subscription.Price.Value / 12m, 2, MidpointRounding.AwayFromZero)
-            : subscription.BillingCycle == BillingCycle.Monthly
-                ? subscription.Price.Value
+        return billingCycle == BillingCycle.Yearly
+            ? decimal.Round(price.Value / 12m, 2, MidpointRounding.AwayFromZero)
+            : billingCycle == BillingCycle.Monthly
+                ? price.Value
                 : 0m;
     }
 
@@ -1012,9 +1262,28 @@ public partial class MainPage : ContentPage
 
     private void UpdateConfirmedSummary()
     {
-        var estimatedMonthlyTotal = repository.ConfirmedSubscriptions
+        var confirmedMonthlyTotal = repository.ConfirmedSubscriptions
             .Sum(CalculateMonthlyEquivalent);
-        ConfirmedSummaryMonthlyTotalValue.Text = estimatedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
+
+        var suspectedMonthlyTotal = repository.SuspectedCandidates
+            .Sum(candidate => CalculateMonthlyEquivalent(candidate.Price, candidate.BillingCycle));
+
+        var possibleMonthlyTotal = confirmedMonthlyTotal + suspectedMonthlyTotal;
+
+        if (ConfirmedSummaryMonthlyTotalValueInput is not null)
+        {
+            ConfirmedSummaryMonthlyTotalValueInput.Text = confirmedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
+        }
+
+        if (SuspectedSummaryMonthlyTotalValueInput is not null)
+        {
+            SuspectedSummaryMonthlyTotalValueInput.Text = suspectedMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
+        }
+
+        if (PossibleSummaryMonthlyTotalValueInput is not null)
+        {
+            PossibleSummaryMonthlyTotalValueInput.Text = possibleMonthlyTotal.ToString("C", CultureInfo.CurrentCulture);
+        }
     }
 
     private void UpdateCollapsibleSectionState()

@@ -129,6 +129,47 @@ public sealed class GmailScanService : IGmailScanService
         return ExtractReadableBody(payload);
     }
 
+    public async Task<EmailBodyContent?> GetMessageContentAsync(string messageId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(messageId))
+        {
+            return null;
+        }
+
+        var authResult = await authService.AuthenticateAsync(cancellationToken).ConfigureAwait(false);
+        if (!authResult.IsSuccess || string.IsNullOrWhiteSpace(authResult.AccessToken))
+        {
+            return null;
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://gmail.googleapis.com/gmail/v1/users/me/messages/{messageId}?format=full");
+
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
+
+        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var messageJson = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (!messageJson.RootElement.TryGetProperty("payload", out var payload))
+        {
+            return null;
+        }
+
+        var html = FindBodyByMimeType(payload, "text/html");
+        var plainText = FindBodyByMimeType(payload, "text/plain");
+
+        if (string.IsNullOrWhiteSpace(html) && string.IsNullOrWhiteSpace(plainText))
+        {
+            return null;
+        }
+
+        return new EmailBodyContent(html, plainText, IsFullBody: true);
+    }
+
     private async Task<(int MessagesChecked, int TotalMatchingMessages, bool CapReached, IReadOnlyList<SubscriptionCandidate> Candidates)> GetCandidatesFromGmailAsync(
         string accessToken,
         CancellationToken cancellationToken)

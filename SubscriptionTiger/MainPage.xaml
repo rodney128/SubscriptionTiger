@@ -6,7 +6,7 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#111111">
 
-    <ScrollView>
+    <ScrollView x:Name="MainScrollView">
         <VerticalStackLayout Padding="16,14,16,96" Spacing="10">
 
             <VerticalStackLayout Spacing="4" HorizontalOptions="Fill" VerticalOptions="Start">
@@ -239,6 +239,7 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="2,6">
                         <Label Text="Bank File" TextColor="#FFFFFF" FontSize="13" VerticalOptions="Center" />
                         <Button Grid.Column="1"
+                                x:Name="BankFileScanButton"
                                 Text="Scan"
                                 Clicked="OnScanBankFileClicked"
                                 CornerRadius="8"
@@ -326,11 +327,15 @@
                            FontSize="17" />
 
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto"
+                          RowDefinitions="Auto,Auto,Auto"
                           ColumnSpacing="8"
                           RowSpacing="2">
-                        <Label Grid.Row="0" Grid.Column="0" Text="Estimated monthly total:" TextColor="#E0E0E0" FontSize="12" />
+                        <Label Grid.Row="0" Grid.Column="0" Text="Confirmed monthly:" TextColor="#E0E0E0" FontSize="12" />
                         <Label Grid.Row="0" Grid.Column="1" x:Name="ConfirmedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="12" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Suspected monthly:" TextColor="#E0E0E0" FontSize="12" />
+                        <Label Grid.Row="1" Grid.Column="1" x:Name="SuspectedSummaryMonthlyTotalValue" TextColor="#FFFFFF" FontSize="12" />
+                        <Label Grid.Row="2" Grid.Column="0" Text="Possible total:" TextColor="#F5C452" FontSize="12" FontAttributes="Bold" />
+                        <Label Grid.Row="2" Grid.Column="1" x:Name="PossibleSummaryMonthlyTotalValue" TextColor="#F5C452" FontSize="12" FontAttributes="Bold" />
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
