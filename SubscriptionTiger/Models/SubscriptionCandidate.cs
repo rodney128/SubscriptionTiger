@@ -11,4 +11,6 @@ public sealed record SubscriptionCandidate(
     string? SourceEmailSubject = null,
     string? SourceEmailSender = null,
     DateTimeOffset? SourceEmailDate = null,
-    string? SourceEmailSnippet = null);
+    string? SourceEmailSnippet = null,
+    string? SourceMessageId = null,
+    string? SourceThreadId = null);

@@ -66,6 +66,7 @@ public sealed class OutlookAuthService : IOutlookAuthService
 
             if (account is not null)
             {
+                diagnosticsService.RecordEvent("OutlookScan", "Connecting to Outlook...");
                 diagnosticsService.RecordEvent("OutlookAuth", "Attempting silent token acquisition");
                 try
                 {
@@ -75,6 +76,7 @@ public sealed class OutlookAuthService : IOutlookAuthService
                         .ConfigureAwait(false);
 
                     diagnosticsService.RecordEvent("OutlookAuth", "Outlook silent auth succeeded");
+                    diagnosticsService.RecordEvent("OutlookScan", "Outlook token acquired");
                     return new OutlookAuthResult(
                         IsConfigured: true,
                         IsSuccess: true,
@@ -94,6 +96,7 @@ public sealed class OutlookAuthService : IOutlookAuthService
             else
             {
                 diagnosticsService.RecordEvent("OutlookAuth", "No cached account found; interactive sign-in required");
+                diagnosticsService.RecordEvent("OutlookScan", "Waiting for Microsoft sign-in...");
             }
 
             diagnosticsService.RecordEvent("OutlookAuth", "Preparing interactive token acquisition");
@@ -115,11 +118,13 @@ public sealed class OutlookAuthService : IOutlookAuthService
 #endif
 
             diagnosticsService.RecordEvent("OutlookAuth", "Starting interactive auth request");
+            diagnosticsService.RecordEvent("OutlookScan", "Waiting for Microsoft sign-in...");
             var interactiveResult = await interactiveBuilder
                 .ExecuteAsync(cancellationToken)
                 .ConfigureAwait(false);
 
             diagnosticsService.RecordEvent("OutlookAuth", "Outlook interactive auth succeeded");
+            diagnosticsService.RecordEvent("OutlookScan", "Outlook token acquired");
             return new OutlookAuthResult(
                 IsConfigured: true,
                 IsSuccess: true,
@@ -144,7 +149,7 @@ public sealed class OutlookAuthService : IOutlookAuthService
                 IsConfigured: true,
                 IsSuccess: false,
                 AccessToken: null,
-                ResultMessage: $"Outlook sign-in failed: {ex.ErrorCode}.",
+                ResultMessage: "Outlook token acquisition failed.",
                 ScanMode: "Microsoft OAuth failed");
         }
         catch (InvalidOperationException ex)

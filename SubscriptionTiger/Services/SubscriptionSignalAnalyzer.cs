@@ -6,6 +6,11 @@ namespace SubscriptionTiger.Services;
 
 public sealed class SubscriptionSignalAnalyzer
 {
+    private const int MonthlyMinDays = 25;
+    private const int MonthlyMaxDays = 35;
+    private const int AnnualMinDays = 300;
+    private const int AnnualMaxDays = 460;
+
     private static readonly string[] PositiveTerms =
     [
         "subscription",
@@ -145,6 +150,147 @@ public sealed class SubscriptionSignalAnalyzer
         return true;
     }
 
+    public IReadOnlyList<SubscriptionCandidate> ApplyRecurringEvidence(IEnumerable<SubscriptionCandidate> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+
+        var candidateList = candidates.ToList();
+        if (candidateList.Count == 0)
+        {
+            return candidateList;
+        }
+
+        var updatedById = candidateList.ToDictionary(x => x.Id, x => x);
+        var groups = candidateList
+            .GroupBy(x => NormalizeVendorKey(x.Vendor), StringComparer.Ordinal)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+            .ToList();
+        var emailEvidenceGroups = candidateList
+            .GroupBy(BuildEmailEvidenceKey, StringComparer.Ordinal)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+            .ToList();
+
+        foreach (var group in groups)
+        {
+            var groupList = group.ToList();
+            var dated = groupList
+                .Where(x => x.SourceEmailDate.HasValue)
+                .OrderBy(x => x.SourceEmailDate)
+                .ToList();
+
+            var monthlyIntervalCount = CountIntervals(dated, MonthlyMinDays, MonthlyMaxDays);
+            var annualIntervalCount = CountIntervals(dated, AnnualMinDays, AnnualMaxDays);
+            var recurringAmount = HasRecurringAmount(groupList);
+
+            foreach (var candidate in groupList)
+            {
+                var updated = candidate;
+                var updatedReason = candidate.DetectionReason;
+                var updatedConfidence = candidate.ConfidenceScore;
+                var updatedCycle = candidate.BillingCycle;
+
+                if (monthlyIntervalCount > 0)
+                {
+                    updatedConfidence = Math.Min(99, updatedConfidence + (dated.Count >= 3 ? 20 : 12) + (recurringAmount ? 5 : 0));
+                    if (dated.Count >= 3)
+                    {
+                        updatedConfidence = Math.Max(updatedConfidence, 80);
+                    }
+
+                    updatedCycle = BillingCycle.Monthly;
+                    updatedReason = AppendReason(updatedReason, recurringAmount
+                        ? "Recurring monthly pattern detected across similar vendor and amount history."
+                        : "Recurring monthly pattern detected across similar vendor history.");
+                }
+
+                if (annualIntervalCount > 0)
+                {
+                    updatedConfidence = Math.Min(99, updatedConfidence + 14 + (recurringAmount ? 4 : 0));
+                    if (updatedCycle == BillingCycle.Unknown)
+                    {
+                        updatedCycle = BillingCycle.Yearly;
+                    }
+
+                    updatedReason = AppendReason(updatedReason, "Recurring yearly pattern detected across roughly 10–15 months.");
+                }
+
+                if (groupList.Count == 1 && ContainsAny($"{candidate.SourceEmailSubject} {candidate.SourceEmailSnippet} {candidate.DetectionReason}", YearlyTerms))
+                {
+                    if (updatedCycle == BillingCycle.Unknown)
+                    {
+                        updatedCycle = BillingCycle.Yearly;
+                    }
+
+                    updatedReason = AppendReason(updatedReason, "Possible annual subscription — annual renewal wording found.");
+                }
+
+                updatedById[candidate.Id] = updated with
+                {
+                    ConfidenceScore = updatedConfidence,
+                    BillingCycle = updatedCycle,
+                    DetectionReason = updatedReason
+                };
+            }
+        }
+
+        foreach (var group in emailEvidenceGroups)
+        {
+            var groupList = group
+                .OrderBy(x => x.SourceEmailDate ?? DateTimeOffset.MinValue)
+                .ToList();
+
+            if (groupList.Count < 2)
+            {
+                continue;
+            }
+
+            var monthlyIntervalCount = CountIntervals(groupList, MonthlyMinDays, MonthlyMaxDays);
+            var annualIntervalCount = CountIntervals(groupList, 330, 400);
+            var sharedEvidenceReason = BuildSharedEvidenceReason(groupList.Count, monthlyIntervalCount, annualIntervalCount);
+
+            foreach (var candidate in groupList)
+            {
+                if (!updatedById.TryGetValue(candidate.Id, out var updated))
+                {
+                    continue;
+                }
+
+                var updatedConfidence = updated.ConfidenceScore;
+                var updatedCycle = updated.BillingCycle;
+                var updatedReason = updated.DetectionReason;
+
+                if (groupList.Count >= 3)
+                {
+                    updatedConfidence = Math.Max(updatedConfidence, 68);
+                }
+                else
+                {
+                    updatedConfidence = Math.Max(updatedConfidence, 48);
+                }
+
+                if (monthlyIntervalCount > 0 && groupList.Count >= 3)
+                {
+                    updatedCycle = BillingCycle.Monthly;
+                    updatedConfidence = Math.Max(updatedConfidence, 82);
+                }
+                else if (annualIntervalCount > 0 && groupList.Count >= 2 && updatedCycle == BillingCycle.Unknown)
+                {
+                    updatedCycle = BillingCycle.Yearly;
+                    updatedConfidence = Math.Max(updatedConfidence, 58);
+                }
+
+                updatedById[candidate.Id] = updated with
+                {
+                    ConfidenceScore = updatedConfidence,
+                    BillingCycle = updatedCycle,
+                    DetectionReason = AppendReason(updatedReason, sharedEvidenceReason)
+                };
+            }
+        }
+
+        return candidateList.Select(x => updatedById[x.Id]).ToList();
+    }
+
     private static DetectionAnalysis AnalyzeMessage(string subject, string snippet, string sender)
     {
         var subjectText = subject.ToLowerInvariant();
@@ -274,6 +420,145 @@ public sealed class SubscriptionSignalAnalyzer
             Reason: reason,
             Price: price,
             BillingCycle: billingCycle);
+    }
+
+    private static int CountIntervals(IReadOnlyList<SubscriptionCandidate> datedCandidates, int minDays, int maxDays)
+    {
+        if (datedCandidates.Count < 2)
+        {
+            return 0;
+        }
+
+        var count = 0;
+        for (var i = 1; i < datedCandidates.Count; i++)
+        {
+            var previousDate = datedCandidates[i - 1].SourceEmailDate;
+            var currentDate = datedCandidates[i].SourceEmailDate;
+            if (!previousDate.HasValue || !currentDate.HasValue)
+            {
+                continue;
+            }
+
+            var daysApart = Math.Abs((currentDate.Value - previousDate.Value).TotalDays);
+            if (daysApart >= minDays && daysApart <= maxDays)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static bool HasRecurringAmount(IReadOnlyList<SubscriptionCandidate> candidates)
+    {
+        var prices = candidates.Where(x => x.Price.HasValue).Select(x => x.Price!.Value).ToList();
+        if (prices.Count < 2)
+        {
+            return false;
+        }
+
+        var normalized = prices.OrderBy(x => x).ToList();
+        for (var i = 1; i < normalized.Count; i++)
+        {
+            var left = normalized[i - 1];
+            var right = normalized[i];
+            var tolerance = Math.Max(2m, Math.Min(left, right) * 0.10m);
+            if (Math.Abs(right - left) <= tolerance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string NormalizeVendorKey(string? vendor)
+    {
+        if (string.IsNullOrWhiteSpace(vendor))
+        {
+            return string.Empty;
+        }
+
+        var normalized = Regex.Replace(vendor.ToLowerInvariant(), "[^a-z0-9]", string.Empty);
+        return normalized;
+    }
+
+    private static string BuildEmailEvidenceKey(SubscriptionCandidate candidate)
+    {
+        var domain = NormalizeSenderDomain(candidate.SourceEmailSender);
+        var normalizedSubject = NormalizeEmailSubject(candidate.SourceEmailSubject);
+        var source = candidate.Source.ToString();
+
+        if (string.IsNullOrWhiteSpace(domain) && string.IsNullOrWhiteSpace(normalizedSubject))
+        {
+            return string.Empty;
+        }
+
+        return $"{source}|{domain}|{normalizedSubject}";
+    }
+
+    private static string NormalizeSenderDomain(string? sender)
+    {
+        if (string.IsNullOrWhiteSpace(sender))
+        {
+            return string.Empty;
+        }
+
+        var match = Regex.Match(sender, @"@([A-Za-z0-9.-]+)");
+        if (match.Success)
+        {
+            return match.Groups[1].Value.ToLowerInvariant();
+        }
+
+        return NormalizeEmailSubject(sender);
+    }
+
+    private static string NormalizeEmailSubject(string? subject)
+    {
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            return string.Empty;
+        }
+
+        var normalized = subject.ToLowerInvariant();
+        normalized = Regex.Replace(normalized, @"\b(re|fw|fwd):\s*", string.Empty);
+        normalized = Regex.Replace(normalized, @"\b\d{1,4}[/-]\d{1,2}([/-]\d{1,4})?\b", " ");
+        normalized = Regex.Replace(normalized, @"\b(invoice|receipt|payment|charged|billing|renewal|subscription|plan|membership)\b", "$1");
+        normalized = Regex.Replace(normalized, @"[^a-z0-9]+", string.Empty);
+        return normalized;
+    }
+
+    private static string BuildSharedEvidenceReason(int emailCount, int monthlyIntervalCount, int annualIntervalCount)
+    {
+        var level = emailCount >= 3 ? "suspected" : "possible";
+        var reason = $"Shared email evidence: {emailCount} similar billing emails ({level}).";
+
+        if (monthlyIntervalCount > 0 && emailCount >= 3)
+        {
+            return $"{reason} Spacing suggests likely monthly billing (25–35 day gaps).";
+        }
+
+        if (annualIntervalCount > 0 && emailCount >= 2)
+        {
+            return $"{reason} Spacing suggests possible yearly billing (330–400 day gaps).";
+        }
+
+        return reason;
+    }
+
+    private static string AppendReason(string existingReason, string additionalReason)
+    {
+        if (string.IsNullOrWhiteSpace(existingReason))
+        {
+            return additionalReason;
+        }
+
+        if (existingReason.Contains(additionalReason, StringComparison.OrdinalIgnoreCase))
+        {
+            return existingReason;
+        }
+
+        return $"{existingReason}; {additionalReason}";
     }
 
     private static bool ContainsAny(string text, IEnumerable<string> terms)

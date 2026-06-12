@@ -66,6 +66,14 @@ namespace SubscriptionTiger
                     new HttpClient(),
                     provider.GetRequiredService<DiagnosticsService>(),
                     provider.GetRequiredService<SubscriptionSignalAnalyzer>()));
+            builder.Services.AddSingleton<IOtherEmailScanService>(provider =>
+                new OtherEmailScanService(
+                    provider.GetRequiredService<DiagnosticsService>(),
+                    provider.GetRequiredService<SubscriptionSignalAnalyzer>()));
+            builder.Services.AddSingleton<IBankFileScanService>(provider =>
+                new BankFileScanService(
+                    provider.GetRequiredService<DiagnosticsService>(),
+                    provider.GetRequiredService<SubscriptionSignalAnalyzer>()));
             builder.Services.AddSingleton<InMemorySubscriptionRepository>();
             builder.Services.AddSingleton<LocalSubscriptionStorageService>();
             builder.Services.AddSingleton<DiagnosticsService>();

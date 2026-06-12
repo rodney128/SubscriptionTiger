@@ -626,6 +626,60 @@ public partial class MainPage : ContentPage
         RefreshUi();
     }
 
+    private async void OnViewEmailClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
+        {
+            return;
+        }
+
+        var candidate = repository.SuspectedCandidates.FirstOrDefault(x => x.Id == id);
+        if (candidate is null)
+        {
+            return;
+        }
+
+        var sourceText = candidate.Source switch
+        {
+            SubscriptionSource.BankFile => "Bank File",
+            SubscriptionSource.OtherEmail => "Other Email",
+            _ => candidate.Source.ToString()
+        };
+
+        var details = new List<string>
+        {
+            $"Vendor: {candidate.Vendor}",
+            $"Source: {sourceText}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSender))
+        {
+            details.Add($"From: {candidate.SourceEmailSender}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSubject))
+        {
+            details.Add($"Subject: {candidate.SourceEmailSubject}");
+        }
+
+        if (candidate.SourceEmailDate.HasValue)
+        {
+            details.Add($"Date: {candidate.SourceEmailDate.Value.LocalDateTime:yyyy-MM-dd HH:mm}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSnippet))
+        {
+            details.Add($"Snippet: {candidate.SourceEmailSnippet}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.DetectionReason))
+        {
+            details.Add($"Matched reason: {candidate.DetectionReason}");
+        }
+
+        await DisplayAlert("Email Evidence", string.Join(Environment.NewLine + Environment.NewLine, details), "Close");
+    }
+
     private async void OnDeleteConfirmedClicked(object? sender, EventArgs e)
     {
         if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
@@ -848,8 +902,34 @@ public partial class MainPage : ContentPage
         };
         dismissButton.Clicked += OnDismissClicked;
 
+        var viewEmailButton = new Button
+        {
+            Text = "View",
+            BackgroundColor = Color.FromArgb("#2E3440"),
+            TextColor = Colors.White,
+            CornerRadius = 10,
+            FontSize = 12,
+            HeightRequest = 36,
+            MinimumWidthRequest = 76,
+            Padding = new Thickness(10, 4),
+            HorizontalOptions = LayoutOptions.Fill,
+            CommandParameter = candidate.Id.ToString()
+        };
+        viewEmailButton.Clicked += OnViewEmailClicked;
+
+        saveButton.FontSize = 12;
+        saveButton.MinimumWidthRequest = 76;
+        saveButton.Padding = new Thickness(10, 4);
+        saveButton.HorizontalOptions = LayoutOptions.Fill;
+
+        dismissButton.FontSize = 12;
+        dismissButton.MinimumWidthRequest = 76;
+        dismissButton.Padding = new Thickness(10, 4);
+        dismissButton.HorizontalOptions = LayoutOptions.Fill;
+
         actions.Children.Add(saveButton);
         actions.Children.Add(dismissButton);
+        actions.Children.Add(viewEmailButton);
         stack.Children.Add(actions);
 
         card.Content = stack;
