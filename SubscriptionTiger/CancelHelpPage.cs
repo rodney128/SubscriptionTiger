@@ -34,7 +34,7 @@ public sealed class CancelHelpPage : ContentPage
         ArgumentNullException.ThrowIfNull(context);
         this.context = context;
 
-        Title = "Cancel Help";
+        Title = "Cancel Assistance";
         BackgroundColor = Color.FromArgb("#121212");
         Padding = new Thickness(12);
 

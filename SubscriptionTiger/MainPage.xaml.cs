@@ -1151,20 +1151,28 @@ public partial class MainPage : ContentPage
         actions.Children.Add(saveButton);
         actions.Children.Add(dismissButton);
         actions.Children.Add(viewEmailButton);
-        stack.Children.Add(actions);
 
         var cancelHelpButton = new Button
         {
-            Text = "Cancel Help",
+            Text = "Cancel Assistance",
             BackgroundColor = Color.FromArgb("#2E3440"),
             TextColor = Colors.White,
             CornerRadius = 10,
             HeightRequest = 36,
             FontSize = 12,
+            HorizontalOptions = LayoutOptions.Fill,
             CommandParameter = candidate.Id.ToString()
         };
         cancelHelpButton.Clicked += OnSuspectedCancelHelpClicked;
-        stack.Children.Add(cancelHelpButton);
+
+        var actionGroup = new VerticalStackLayout
+        {
+            Spacing = 8,
+            HorizontalOptions = LayoutOptions.Start
+        };
+        actionGroup.Children.Add(actions);
+        actionGroup.Children.Add(cancelHelpButton);
+        stack.Children.Add(actionGroup);
 
         card.Content = stack;
         return card;
@@ -1203,7 +1211,7 @@ public partial class MainPage : ContentPage
 
         var cancelHelpButton = new Button
         {
-            Text = "Cancel Help",
+            Text = "Cancel Assistance",
             BackgroundColor = Color.FromArgb("#2E3440"),
             TextColor = Colors.White,
             CornerRadius = 10,

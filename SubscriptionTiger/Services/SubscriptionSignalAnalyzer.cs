@@ -132,7 +132,7 @@ public sealed class SubscriptionSignalAnalyzer
 
     /// <summary>
     /// Returns the canonical trusted domain for a known vendor from the curated allow-list, if one
-    /// exists. Used by UI helpers (e.g. Cancel Help) to offer a safe "open official website" action
+    /// exists. Used by UI helpers (e.g. Cancel Assistance) to offer a safe "open official website" action
     /// without ever trusting a raw sender domain or a link parsed from an email body.
     /// </summary>
     public static bool TryGetTrustedVendorDomain(string vendor, out string domain)
