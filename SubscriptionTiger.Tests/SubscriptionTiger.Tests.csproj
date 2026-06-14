@@ -17,9 +17,13 @@
   <ItemGroup>
     <Compile Include="..\SubscriptionTiger\Services\InMemorySubscriptionRepository.cs" Link="Linked\Services\InMemorySubscriptionRepository.cs" />
     <Compile Include="..\SubscriptionTiger\Services\SubscriptionSignalAnalyzer.cs" Link="Linked\Services\SubscriptionSignalAnalyzer.cs" />
+    <Compile Include="..\SubscriptionTiger\Services\BankFileScanService.cs" Link="Linked\Services\BankFileScanService.cs" />
+    <Compile Include="..\SubscriptionTiger\Services\DiagnosticsService.cs" Link="Linked\Services\DiagnosticsService.cs" />
+    <Compile Include="..\SubscriptionTiger\Services\Interfaces\IBankFileScanService.cs" Link="Linked\Services\Interfaces\IBankFileScanService.cs" />
     <Compile Include="..\SubscriptionTiger\Models\SubscriptionCandidate.cs" Link="Linked\Models\SubscriptionCandidate.cs" />
     <Compile Include="..\SubscriptionTiger\Models\CandidateAddResult.cs" Link="Linked\Models\CandidateAddResult.cs" />
     <Compile Include="..\SubscriptionTiger\Models\ConfirmedSubscription.cs" Link="Linked\Models\ConfirmedSubscription.cs" />
+    <Compile Include="..\SubscriptionTiger\Models\BankFileScanResult.cs" Link="Linked\Models\BankFileScanResult.cs" />
     <Compile Include="..\SubscriptionTiger\Models\BillingCycle.cs" Link="Linked\Models\BillingCycle.cs" />
     <Compile Include="..\SubscriptionTiger\Models\SubscriptionSource.cs" Link="Linked\Models\SubscriptionSource.cs" />
     <Compile Include="..\SubscriptionTiger\Models\SubscriptionStatus.cs" Link="Linked\Models\SubscriptionStatus.cs" />

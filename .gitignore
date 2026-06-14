@@ -6,6 +6,7 @@ obj/
 *.user
 *.suo
 _private_signing/
+_private_test_data/
 *.keystore
 *.jks
 *.p12
