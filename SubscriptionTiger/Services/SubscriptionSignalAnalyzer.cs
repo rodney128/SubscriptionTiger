@@ -149,6 +149,24 @@ public sealed class SubscriptionSignalAnalyzer
         return false;
     }
 
+    /// <summary>
+    /// Builds a stable, intentionally narrow signature used to remember suspects the user marked as
+    /// "not a subscription". The signature combines source, normalized vendor, sender domain and a
+    /// normalized subject key so that re-scanning the same recurring billing email stays ignored,
+    /// while unrelated future messages (different vendor/domain/subject) are not suppressed.
+    /// </summary>
+    public static string BuildIgnoreSignature(SubscriptionCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var source = candidate.Source.ToString();
+        var vendor = NormalizeVendorKey(candidate.Vendor);
+        var domain = NormalizeSenderDomain(candidate.SourceEmailSender);
+        var subject = NormalizeEmailSubject(candidate.SourceEmailSubject);
+
+        return $"{source}|{vendor}|{domain}|{subject}";
+    }
+
     public bool TryAnalyze(
         string sender,
         string subject,

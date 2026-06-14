@@ -14,10 +14,12 @@ public sealed class LocalSubscriptionStorageService
     };
 
     private readonly string filePath;
+    private readonly string ignoredFilePath;
 
     public LocalSubscriptionStorageService()
     {
         filePath = Path.Combine(FileSystem.AppDataDirectory, "confirmed-subscriptions.json");
+        ignoredFilePath = Path.Combine(FileSystem.AppDataDirectory, "ignored-suspects.json");
     }
 
     /// <summary>
@@ -112,5 +114,55 @@ public sealed class LocalSubscriptionStorageService
 
         var json = JsonSerializer.Serialize(subscriptions, SerializerOptions);
         await File.WriteAllTextAsync(filePath, json, cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads the locally persisted signatures of suspects the user marked as "not a subscription".
+    /// </summary>
+    public async Task<IReadOnlyList<string>> LoadIgnoredSignaturesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!File.Exists(ignoredFilePath))
+            {
+                return Array.Empty<string>();
+            }
+
+            var json = await File.ReadAllTextAsync(ignoredFilePath, cancellationToken);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return Array.Empty<string>();
+            }
+
+            var signatures = JsonSerializer.Deserialize<List<string>>(json, SerializerOptions);
+            if (signatures is null)
+            {
+                return Array.Empty<string>();
+            }
+
+            return signatures
+                .Where(signature => !string.IsNullOrWhiteSpace(signature))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
+        }
+        catch (IOException)
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Saves the signatures of ignored suspects to local app storage.
+    /// </summary>
+    public async Task SaveIgnoredSignaturesAsync(IEnumerable<string> signatures, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(signatures);
+
+        var json = JsonSerializer.Serialize(signatures, SerializerOptions);
+        await File.WriteAllTextAsync(ignoredFilePath, json, cancellationToken);
     }
 }

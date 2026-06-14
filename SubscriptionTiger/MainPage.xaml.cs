@@ -614,6 +614,7 @@ public partial class MainPage : ContentPage
 
         repository.ClearAllTestData();
         await SaveConfirmedSubscriptionsAsync();
+        await SaveIgnoredSignaturesAsync();
 
         lastAction = "Local data cleared.";
         lastScanStatus = "Saved local subscriptions and scan results were cleared.";
@@ -697,6 +698,25 @@ public partial class MainPage : ContentPage
         RefreshUi();
     }
 
+    private async void OnIgnoreSuspectedClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
+        {
+            return;
+        }
+
+        var signature = repository.IgnoreCandidate(id);
+        if (signature is null)
+        {
+            return;
+        }
+
+        await SaveIgnoredSignaturesAsync();
+        lastAction = "Ignored suspected subscription";
+        lastScanStatus = "Marked as not a subscription. It will stay hidden after restart and rescans.";
+        RefreshUi();
+    }
+
     private async void OnViewEmailClicked(object? sender, EventArgs e)
     {
         if (sender is not Button button || button.CommandParameter is not string rawId || !Guid.TryParse(rawId, out var id))
@@ -725,12 +745,9 @@ public partial class MainPage : ContentPage
             body = null;
         }
 
-        if (body is null || !body.HasContent)
-        {
-            await ShowEmailEvidenceFallbackAsync(candidate);
-            return;
-        }
-
+        // Always open the full evidence view. When the body could not be fetched the page still shows
+        // vendor/confidence/price/cycle/source/from/subject/date/snippet plus a clear fallback message,
+        // so the user is never left without a readable detail view.
         await Navigation.PushModalAsync(new EmailViewerPage(candidate, body));
     }
 
@@ -841,49 +858,6 @@ public partial class MainPage : ContentPage
             SubscriptionSource.Outlook => await outlookScanService.GetMessageContentAsync(candidate.SourceMessageId, cancellationToken),
             _ => null
         };
-    }
-
-    private async Task ShowEmailEvidenceFallbackAsync(SubscriptionCandidate candidate)
-    {
-        var sourceText = candidate.Source switch
-        {
-            SubscriptionSource.BankFile => "Bank File",
-            SubscriptionSource.OtherEmail => "Other Email",
-            _ => candidate.Source.ToString()
-        };
-
-        var details = new List<string>
-        {
-            $"Vendor: {candidate.Vendor}",
-            $"Source: {sourceText}"
-        };
-
-        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSender))
-        {
-            details.Add($"From: {candidate.SourceEmailSender}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSubject))
-        {
-            details.Add($"Subject: {candidate.SourceEmailSubject}");
-        }
-
-        if (candidate.SourceEmailDate.HasValue)
-        {
-            details.Add($"Date: {candidate.SourceEmailDate.Value.LocalDateTime:yyyy-MM-dd HH:mm}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSnippet))
-        {
-            details.Add($"Snippet: {candidate.SourceEmailSnippet}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(candidate.DetectionReason))
-        {
-            details.Add($"Matched reason: {candidate.DetectionReason}");
-        }
-
-        await DisplayAlert("Email Evidence", string.Join(Environment.NewLine + Environment.NewLine, details), "Close");
     }
 
     private async void OnDeleteConfirmedClicked(object? sender, EventArgs e)
@@ -1165,6 +1139,19 @@ public partial class MainPage : ContentPage
         };
         cancelHelpButton.Clicked += OnSuspectedCancelHelpClicked;
 
+        var ignoreButton = new Button
+        {
+            Text = "Not a subscription",
+            BackgroundColor = Color.FromArgb("#3A2E2E"),
+            TextColor = Color.FromArgb("#F0B8B8"),
+            CornerRadius = 10,
+            HeightRequest = 36,
+            FontSize = 12,
+            HorizontalOptions = LayoutOptions.Fill,
+            CommandParameter = candidate.Id.ToString()
+        };
+        ignoreButton.Clicked += OnIgnoreSuspectedClicked;
+
         var actionGroup = new VerticalStackLayout
         {
             Spacing = 8,
@@ -1172,6 +1159,7 @@ public partial class MainPage : ContentPage
         };
         actionGroup.Children.Add(actions);
         actionGroup.Children.Add(cancelHelpButton);
+        actionGroup.Children.Add(ignoreButton);
         stack.Children.Add(actionGroup);
 
         card.Content = stack;
@@ -1260,12 +1248,21 @@ public partial class MainPage : ContentPage
     {
         var stored = await localSubscriptionStorageService.LoadConfirmedSubscriptionsAsync();
         repository.SetConfirmedSubscriptions(stored);
+
+        var ignored = await localSubscriptionStorageService.LoadIgnoredSignaturesAsync();
+        repository.SetIgnoredSignatures(ignored);
+
         RefreshUi();
     }
 
     private async Task SaveConfirmedSubscriptionsAsync()
     {
         await localSubscriptionStorageService.SaveConfirmedSubscriptionsAsync(repository.ConfirmedSubscriptions);
+    }
+
+    private async Task SaveIgnoredSignaturesAsync()
+    {
+        await localSubscriptionStorageService.SaveIgnoredSignaturesAsync(repository.IgnoredSignatures);
     }
 
     private void UpdateConfirmedSummary()

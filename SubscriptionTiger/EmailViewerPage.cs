@@ -17,6 +17,12 @@ public sealed class EmailViewerPage : ContentPage
         Padding = new Thickness(12);
 
         var header = BuildHeader(candidate, body);
+        var headerScroll = new ScrollView
+        {
+            Content = header,
+            MaximumHeightRequest = 240,
+            Orientation = ScrollOrientation.Vertical
+        };
         var bodyView = BuildBodyView(body);
 
         var closeButton = new Button
@@ -40,7 +46,7 @@ public sealed class EmailViewerPage : ContentPage
             RowSpacing = 10
         };
 
-        layout.Add(header, 0, 0);
+        layout.Add(headerScroll, 0, 0);
         layout.Add(bodyView, 0, 1);
         layout.Add(closeButton, 0, 2);
 
@@ -60,6 +66,17 @@ public sealed class EmailViewerPage : ContentPage
 
         stack.Children.Add(CreateHeaderLabel(candidate.Vendor, 17, FontAttributes.Bold, "#F5C452"));
         stack.Children.Add(CreateHeaderLabel($"Source: {sourceText}", 12, FontAttributes.None, "#E0E0E0"));
+
+        var priceText = candidate.Price.HasValue
+            ? candidate.Price.Value.ToString("C", CultureInfo.CurrentCulture)
+            : "Unknown";
+        var cycleText = candidate.BillingCycle switch
+        {
+            BillingCycle.Yearly => "Yearly/Annual",
+            BillingCycle.Monthly => "Monthly",
+            _ => "Unknown"
+        };
+        stack.Children.Add(CreateHeaderLabel($"Price: {priceText} | Cycle: {cycleText}", 12, FontAttributes.None, "#E0E0E0"));
 
         if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSender))
         {
@@ -84,12 +101,55 @@ public sealed class EmailViewerPage : ContentPage
 
         stack.Children.Add(CreateHeaderLabel($"Confidence: {candidate.ConfidenceScore}", 12, FontAttributes.None, "#E0E0E0"));
 
+        AppendRecurrenceEvidence(stack, candidate);
+
+        if (!string.IsNullOrWhiteSpace(candidate.SourceEmailSnippet))
+        {
+            stack.Children.Add(CreateHeaderLabel($"Snippet: {candidate.SourceEmailSnippet}", 12, FontAttributes.None, "#C8C8C8"));
+        }
+
         if (body is null || !body.IsFullBody)
         {
-            stack.Children.Add(CreateHeaderLabel("Full email could not be loaded. Showing available evidence.", 11, FontAttributes.Italic, "#F0A0A0"));
+            stack.Children.Add(CreateHeaderLabel("Full email could not be loaded. Showing available evidence below.", 11, FontAttributes.Italic, "#F0A0A0"));
         }
 
         return stack;
+    }
+
+    private static void AppendRecurrenceEvidence(VerticalStackLayout stack, SubscriptionCandidate candidate)
+    {
+        var hasRecurrence = candidate.OccurrenceCount > 1
+            || !string.IsNullOrWhiteSpace(candidate.RecurringEvidenceSummary)
+            || candidate.FirstSeenDate.HasValue
+            || candidate.LastSeenDate.HasValue
+            || candidate.LastSourceEmailDate.HasValue;
+
+        if (!hasRecurrence)
+        {
+            return;
+        }
+
+        if (candidate.OccurrenceCount > 1)
+        {
+            stack.Children.Add(CreateHeaderLabel($"Seen {candidate.OccurrenceCount} times", 12, FontAttributes.Bold, "#CFAF57"));
+        }
+
+        var firstSeen = candidate.FirstSeenDate;
+        if (firstSeen.HasValue)
+        {
+            stack.Children.Add(CreateHeaderLabel($"First seen: {firstSeen.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture)}", 12, FontAttributes.None, "#E0E0E0"));
+        }
+
+        var lastSeen = candidate.LastSourceEmailDate ?? candidate.LastSeenDate;
+        if (lastSeen.HasValue)
+        {
+            stack.Children.Add(CreateHeaderLabel($"Last seen: {lastSeen.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture)}", 12, FontAttributes.None, "#E0E0E0"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.RecurringEvidenceSummary))
+        {
+            stack.Children.Add(CreateHeaderLabel(candidate.RecurringEvidenceSummary, 12, FontAttributes.None, "#CFAF57"));
+        }
     }
 
     private View BuildBodyView(EmailBodyContent? body)

@@ -206,6 +206,107 @@ public class InMemorySubscriptionRepositoryTests
         Assert.Equal(2, repository.SuspectedCandidates.Count);
     }
 
+    // Case 6: ignoring a suspect removes it and prevents it from reappearing on a later scan.
+
+    [Fact]
+    public void WhenCandidateIgnoredThenItIsRemovedFromSuspectedList()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        var id = repository.SuspectedCandidates[0].Id;
+
+        repository.IgnoreCandidate(id);
+
+        Assert.Empty(repository.SuspectedCandidates);
+    }
+
+    [Fact]
+    public void WhenCandidateIgnoredThenSignatureIsRecorded()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        var id = repository.SuspectedCandidates[0].Id;
+
+        repository.IgnoreCandidate(id);
+
+        Assert.Single(repository.IgnoredSignatures);
+    }
+
+    [Fact]
+    public void WhenIgnoredSuspectRescannedThenItIsNotAddedBack()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        var id = repository.SuspectedCandidates[0].Id;
+        repository.IgnoreCandidate(id);
+
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-2") });
+
+        Assert.Empty(repository.SuspectedCandidates);
+    }
+
+    [Fact]
+    public void WhenIgnoredSuspectRescannedThenResultReportsDuplicate()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        var id = repository.SuspectedCandidates[0].Id;
+        repository.IgnoreCandidate(id);
+
+        var result = repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-2") });
+
+        Assert.Equal(new CandidateAddResult(0, 1), result);
+    }
+
+    [Fact]
+    public void WhenSignaturesRestoredThenMatchingSuspectIsSuppressedOnScan()
+    {
+        var seed = new InMemorySubscriptionRepository();
+        seed.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        seed.IgnoreCandidate(seed.SuspectedCandidates[0].Id);
+        var persisted = seed.IgnoredSignatures.ToArray();
+
+        var restored = new InMemorySubscriptionRepository();
+        restored.SetIgnoredSignatures(persisted);
+        restored.AddCandidates(new[] { CreateCandidate(messageId: "msg-2") });
+
+        Assert.Empty(restored.SuspectedCandidates);
+    }
+
+    [Fact]
+    public void WhenDifferentVendorAddedThenIgnoredSuspectDoesNotSuppressIt()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(vendor: "Netflix", messageId: "msg-1", sender: "billing@netflix.com") });
+        repository.IgnoreCandidate(repository.SuspectedCandidates[0].Id);
+
+        repository.AddCandidates(new[] { CreateCandidate(vendor: "Spotify", messageId: "msg-2", sender: "billing@spotify.com") });
+
+        Assert.Single(repository.SuspectedCandidates);
+    }
+
+    [Fact]
+    public void WhenTestDataClearedThenIgnoredSignaturesAreCleared()
+    {
+        var repository = new InMemorySubscriptionRepository();
+        repository.AddCandidates(new[] { CreateCandidate(messageId: "msg-1") });
+        repository.IgnoreCandidate(repository.SuspectedCandidates[0].Id);
+
+        repository.ClearAllTestData();
+
+        Assert.Empty(repository.IgnoredSignatures);
+    }
+
+    [Fact]
+    public void WhenIgnoreCandidateCalledWithUnknownIdThenReturnsNull()
+    {
+        var repository = new InMemorySubscriptionRepository();
+
+        var signature = repository.IgnoreCandidate(Guid.NewGuid());
+
+        Assert.Null(signature);
+    }
+
     private static SubscriptionCandidate CreateCandidate(
         string vendor = "Netflix",
         decimal? price = 15.99m,

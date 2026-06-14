@@ -12,10 +12,17 @@ public sealed class InMemorySubscriptionRepository
 
     private readonly List<SubscriptionCandidate> suspectedCandidates = new();
     private readonly List<ConfirmedSubscription> confirmedSubscriptions = new();
+    private readonly HashSet<string> ignoredSignatures = new(StringComparer.Ordinal);
 
     public IReadOnlyList<SubscriptionCandidate> SuspectedCandidates => suspectedCandidates;
 
     public IReadOnlyList<ConfirmedSubscription> ConfirmedSubscriptions => confirmedSubscriptions;
+
+    /// <summary>
+    /// Signatures of suspects the user marked as "not a subscription". Persisted by the caller so the
+    /// same suspect does not reappear after an app restart or a later scan.
+    /// </summary>
+    public IReadOnlyCollection<string> IgnoredSignatures => ignoredSignatures;
 
     public void SetConfirmedSubscriptions(IEnumerable<ConfirmedSubscription> subscriptions)
     {
@@ -23,6 +30,23 @@ public sealed class InMemorySubscriptionRepository
 
         confirmedSubscriptions.Clear();
         confirmedSubscriptions.AddRange(subscriptions);
+    }
+
+    /// <summary>
+    /// Replaces the ignored-suspect signatures, typically from local storage at startup.
+    /// </summary>
+    public void SetIgnoredSignatures(IEnumerable<string> signatures)
+    {
+        ArgumentNullException.ThrowIfNull(signatures);
+
+        ignoredSignatures.Clear();
+        foreach (var signature in signatures)
+        {
+            if (!string.IsNullOrWhiteSpace(signature))
+            {
+                ignoredSignatures.Add(signature);
+            }
+        }
     }
 
     public CandidateAddResult AddCandidates(IEnumerable<SubscriptionCandidate> candidates)
@@ -34,6 +58,12 @@ public sealed class InMemorySubscriptionRepository
 
         foreach (var candidate in candidates)
         {
+            if (IsIgnored(candidate))
+            {
+                duplicateCount++;
+                continue;
+            }
+
             var alreadyConfirmed = confirmedSubscriptions.Any(x =>
                 string.Equals(x.Vendor, candidate.Vendor, StringComparison.OrdinalIgnoreCase)
                 && x.BillingCycle == candidate.BillingCycle);
@@ -148,6 +178,30 @@ public sealed class InMemorySubscriptionRepository
         return suspectedCandidates.Remove(candidate);
     }
 
+    /// <summary>
+    /// Marks a suspected candidate as "not a subscription": removes it (and any suspected entries that
+    /// share the same ignore signature) and records the signature so future scans skip it. Returns the
+    /// recorded signature, or null when the candidate no longer exists.
+    /// </summary>
+    public string? IgnoreCandidate(Guid candidateId)
+    {
+        var candidate = suspectedCandidates.FirstOrDefault(x => x.Id == candidateId);
+        if (candidate is null)
+        {
+            return null;
+        }
+
+        var signature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(candidate);
+        ignoredSignatures.Add(signature);
+        suspectedCandidates.RemoveAll(x =>
+            string.Equals(SubscriptionSignalAnalyzer.BuildIgnoreSignature(x), signature, StringComparison.Ordinal));
+        return signature;
+    }
+
+    private bool IsIgnored(SubscriptionCandidate candidate)
+        => ignoredSignatures.Count > 0
+            && ignoredSignatures.Contains(SubscriptionSignalAnalyzer.BuildIgnoreSignature(candidate));
+
     public bool AddManualSampleIfMissing()
     {
         if (SampleAlreadyExists())
@@ -197,6 +251,7 @@ public sealed class InMemorySubscriptionRepository
 
         suspectedCandidates.Clear();
         confirmedSubscriptions.Clear();
+        ignoredSignatures.Clear();
 
         return hadData;
     }

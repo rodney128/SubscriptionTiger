@@ -214,4 +214,62 @@ public class SubscriptionSignalAnalyzerTests
             SourceEmailSnippet: MismatchSnippet,
             SourceMessageId: Guid.NewGuid().ToString());
     }
+
+    [Fact]
+    public void WhenIgnoreSignatureBuiltTwiceForSameSuspectThenSignaturesMatch()
+    {
+        var first = CreateIgnoreCandidate(messageId: "msg-1", date: new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var second = CreateIgnoreCandidate(messageId: "msg-2", date: new DateTimeOffset(2024, 2, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var firstSignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(first);
+        var secondSignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(second);
+
+        Assert.Equal(firstSignature, secondSignature);
+    }
+
+    [Fact]
+    public void WhenIgnoreSignatureBuiltForDifferentVendorThenSignaturesDiffer()
+    {
+        var netflix = CreateIgnoreCandidate(vendor: "Netflix", sender: "billing@netflix.com");
+        var spotify = CreateIgnoreCandidate(vendor: "Spotify", sender: "billing@spotify.com");
+
+        var netflixSignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(netflix);
+        var spotifySignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(spotify);
+
+        Assert.NotEqual(netflixSignature, spotifySignature);
+    }
+
+    [Fact]
+    public void WhenIgnoreSignatureBuiltForDifferentSourceThenSignaturesDiffer()
+    {
+        var gmail = CreateIgnoreCandidate(source: SubscriptionSource.Gmail);
+        var outlook = CreateIgnoreCandidate(source: SubscriptionSource.Outlook);
+
+        var gmailSignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(gmail);
+        var outlookSignature = SubscriptionSignalAnalyzer.BuildIgnoreSignature(outlook);
+
+        Assert.NotEqual(gmailSignature, outlookSignature);
+    }
+
+    private static SubscriptionCandidate CreateIgnoreCandidate(
+        string vendor = "Netflix",
+        string sender = "billing@netflix.com",
+        string subject = "Your Netflix subscription receipt",
+        SubscriptionSource source = SubscriptionSource.Gmail,
+        string? messageId = "msg-1",
+        DateTimeOffset? date = null)
+    {
+        return new SubscriptionCandidate(
+            Guid.NewGuid(),
+            vendor,
+            15.99m,
+            BillingCycle.Monthly,
+            55,
+            source,
+            DetectionReason: $"Detected {vendor}",
+            SourceEmailSubject: subject,
+            SourceEmailSender: sender,
+            SourceEmailDate: date,
+            SourceMessageId: messageId);
+    }
 }
