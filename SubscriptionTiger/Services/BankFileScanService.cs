@@ -322,13 +322,16 @@ public sealed class BankFileScanService : IBankFileScanService
             var hasNonSubscriptionKeyword = ContainsAny(description, NonSubscriptionKeywords);
             var amountConsistent = HasConsistentAmounts(ordered);
             var monthlySeries = HasMonthlySeries(ordered);
+            var sustainedMonthlySeries = HasSustainedMonthlySeries(ordered);
 
             // A bank-only vendor must show a real recurrence pattern; appearing multiple times is not enough.
             // Strong evidence = sustained monthly series with a stable amount. A subscription-like name
             // only counts when paired with at least one near-monthly gap (or an annual pattern/clue).
+            // A long, sustained monthly cadence (4+ near-monthly gaps) is itself strong evidence even when
+            // the amount varies, so usage- or FX-based subscriptions are not missed.
             var strongRecurrence = monthlySeries && amountConsistent;
             var keywordBackedRecurrence = hasSubscriptionKeyword && (monthlyPattern || annualPattern || explicitAnnual);
-            var bankRecurringEvidence = strongRecurrence || keywordBackedRecurrence || annualPattern || explicitAnnual;
+            var bankRecurringEvidence = strongRecurrence || sustainedMonthlySeries || keywordBackedRecurrence || annualPattern || explicitAnnual;
 
             var analyzerMatched = signalAnalyzer.TryAnalyze(
                 sender: latest.Description,
@@ -347,7 +350,9 @@ public sealed class BankFileScanService : IBankFileScanService
 
             // Ordinary repeated spending (parking, vending, fuel, groceries, restaurants, transfers,
             // interest, etc.) is dropped unless a positive subscription signal clearly overrides it.
-            if (hasNonSubscriptionKeyword && !hasSubscriptionKeyword && !analyzerMatched && !explicitAnnual)
+            // A long, sustained monthly cadence is treated as such a signal so genuine recurring charges
+            // that happen to contain a category word are not discarded.
+            if (hasNonSubscriptionKeyword && !hasSubscriptionKeyword && !analyzerMatched && !explicitAnnual && !sustainedMonthlySeries)
             {
                 continue;
             }
@@ -377,7 +382,7 @@ public sealed class BankFileScanService : IBankFileScanService
                     confidence = ordered.Count == 1 ? 44 : 58;
                 }
             }
-            else if (monthlyPattern)
+            else if (monthlyPattern || sustainedMonthlySeries)
             {
                 billingCycle = BillingCycle.Monthly;
 
@@ -390,6 +395,11 @@ public sealed class BankFileScanService : IBankFileScanService
                 {
                     reason = "Monthly charge from a subscription-like vendor.";
                     confidence = Math.Max(confidence, 62);
+                }
+                else if (sustainedMonthlySeries)
+                {
+                    reason = "Recurring monthly charge with a varying amount — review manually.";
+                    confidence = Math.Max(confidence, 58);
                 }
                 else
                 {
@@ -482,6 +492,35 @@ public sealed class BankFileScanService : IBankFileScanService
 
         // Require the majority of intervals to be near-monthly so bursty spending does not qualify.
         return gapCount > 0 && monthlyGaps * 2 >= gapCount && monthlyGaps >= 2;
+    }
+
+    /// <summary>
+    /// Returns true when a vendor shows a long, sustained roughly-monthly cadence: the majority of
+    /// consecutive gaps fall in the 24-38 day window AND there are at least four such near-monthly
+    /// intervals (five or more charges). This is deliberately stricter than <see cref="HasMonthlySeries"/>
+    /// so that a genuine recurring charge whose amount varies (tax, FX, usage tiers) can still be
+    /// recognised, while short bursts of frequent spending do not qualify.
+    /// </summary>
+    private static bool HasSustainedMonthlySeries(IReadOnlyList<BankTransaction> transactions)
+    {
+        if (transactions.Count < 5)
+        {
+            return false;
+        }
+
+        var gapCount = 0;
+        var monthlyGaps = 0;
+        for (var i = 1; i < transactions.Count; i++)
+        {
+            var gapDays = Math.Abs((transactions[i].Date - transactions[i - 1].Date).TotalDays);
+            gapCount++;
+            if (gapDays is >= 24 and <= 38)
+            {
+                monthlyGaps++;
+            }
+        }
+
+        return gapCount > 0 && monthlyGaps * 2 >= gapCount && monthlyGaps >= 4;
     }
 
     /// <summary>
@@ -660,52 +699,106 @@ public sealed class BankFileScanService : IBankFileScanService
             cleaned = cleaned.Replace(token, string.Empty, StringComparison.Ordinal);
         }
 
-        cleaned = StripTrailingReferenceNoise(cleaned);
+        cleaned = StripReferenceNoise(cleaned);
 
         return cleaned.Length > 64 ? cleaned[..64] : cleaned;
     }
 
     /// <summary>
-    /// Removes trailing phone numbers and reference codes (for example "410-568-3200" or store ids)
-    /// so the same vendor groups together even when the bank appends varying contact/reference digits.
+    /// Removes phone numbers and per-transaction reference codes (for example "410-568-3200",
+    /// a leading store/auth id like "0584", or an order id like "amzn8842x") wherever they appear so the
+    /// same vendor groups together even when the bank inserts varying contact/reference tokens before or
+    /// after the vendor name. The longest alphabetic token (the vendor name) is always preserved so a
+    /// description made up mostly of digits never collapses to an empty key.
     /// </summary>
-    private static string StripTrailingReferenceNoise(string value)
+    private static string StripReferenceNoise(string value)
     {
         var tokens = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lastMeaningful = tokens.Length;
-        for (var i = tokens.Length - 1; i >= 1; i--)
+        if (tokens.Length <= 1)
         {
-            if (IsReferenceNoiseToken(tokens[i]))
+            return value;
+        }
+
+        var keepIndex = IndexOfLongestAlphaToken(tokens);
+        var kept = new List<string>(tokens.Length);
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            if (i != keepIndex && IsReferenceNoiseToken(tokens[i]))
             {
-                lastMeaningful = i;
+                continue;
             }
-            else
+
+            kept.Add(tokens[i]);
+        }
+
+        return kept.Count == 0 ? value : string.Join(' ', kept);
+    }
+
+    private static int IndexOfLongestAlphaToken(IReadOnlyList<string> tokens)
+    {
+        var bestIndex = -1;
+        var bestAlpha = 0;
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var alpha = 0;
+            foreach (var c in tokens[i])
             {
-                break;
+                if (char.IsLetter(c))
+                {
+                    alpha++;
+                }
+            }
+
+            if (alpha > bestAlpha)
+            {
+                bestAlpha = alpha;
+                bestIndex = i;
             }
         }
 
-        return lastMeaningful == tokens.Length
-            ? value
-            : string.Join(' ', tokens[..lastMeaningful]);
+        return bestIndex;
     }
 
     private static bool IsReferenceNoiseToken(string token)
     {
         var hasDigit = false;
+        var hasLetter = false;
+        var maxDigitRun = 0;
+        var currentDigitRun = 0;
         foreach (var c in token)
         {
             if (char.IsDigit(c))
             {
                 hasDigit = true;
+                currentDigitRun++;
+                if (currentDigitRun > maxDigitRun)
+                {
+                    maxDigitRun = currentDigitRun;
+                }
             }
-            else if (c is not ('-' or '#' or '*' or '.' or '(' or ')'))
+            else
             {
-                return false;
+                currentDigitRun = 0;
+                if (char.IsLetter(c))
+                {
+                    hasLetter = true;
+                }
+                else if (c is not ('-' or '#' or '*' or '.' or '(' or ')'))
+                {
+                    return false;
+                }
             }
         }
 
-        return hasDigit;
+        if (!hasDigit)
+        {
+            return false;
+        }
+
+        // Pure digit/punctuation tokens (phone numbers, store ids) are always noise. Alphanumeric tokens
+        // are only treated as a reference id when they contain a long digit run (for example "amzn8842x"),
+        // so short brand-bearing tokens such as "id3" or "co2" are preserved.
+        return !hasLetter || maxDigitRun >= 4;
     }
 
     private static string GetCell(IReadOnlyList<string> cells, int index)
